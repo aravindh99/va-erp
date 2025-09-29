@@ -28,7 +28,6 @@ const navArray = [
     children: [
       { label: "Item Stock Report", path: "/reports/item-stock" },
       { label: "Production Report", path: "/reports/production" },
-      { label: "Service Report", path: "/reports/service" },
     ],
   },
   { label: "Brand", path: "/brand" },

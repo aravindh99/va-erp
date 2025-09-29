@@ -74,7 +74,6 @@ function App() {
             <Route path="reports/item-stock" element={<ItemStockReport />} />
             <Route path="reports/production" element={<ProductionReport />} />
             <Route path="reports/purchase-order" element={<PurchaseOrderReport />} />
-            <Route path="reports/service" element={<ServiceManagement />} />
             <Route path="reports/vehicle-service/:vehicleId" element={<VehicleServiceHistory />} />
             <Route path="reports/compressor-service/:compressorId" element={<CompressorServiceHistory />} />
           </Route>

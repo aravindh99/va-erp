@@ -10,6 +10,7 @@ import {
   Card,
   Popconfirm,
   Modal,
+  message,
 } from "antd";
 import {
   PlusOutlined,
@@ -115,6 +116,8 @@ const UserManagement = () => {
       setShowPasswordForm(false);
       setEditingId(null);
       passwordForm.resetFields();
+      // Refresh users to reflect updated metadata (updatedBy/updatedAt)
+      fetchUsers();
     } catch (err) {
       console.error("Error updating password", err);
       message.error("Error updating password");

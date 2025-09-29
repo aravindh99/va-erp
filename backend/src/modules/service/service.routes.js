@@ -33,9 +33,6 @@ router.delete(
 router.delete("/:id/hard", authorize("delete"), ServiceController.hardDelete);
 router.post("/:id/restore", authorize("update"), ServiceController.restore);
 
-// Service Alerts routes
-import { serviceAlertsController } from "./serviceAlerts.controller.js";
-router.get("/alerts", authorize("read"), serviceAlertsController.getServiceAlerts);
-router.get("/history/:type/:id", authorize("read"), serviceAlertsController.getServiceHistory);
+// Service Alerts routes (moved to separate route file - see server.js)
 
 export default router;
