@@ -243,13 +243,30 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .mobile-card .ant-card-body {
+            padding: 12px !important;
+          }
+          .mobile-card .ant-statistic-title {
+            font-size: 12px !important;
+            margin-bottom: 4px !important;
+          }
+          .mobile-card .ant-statistic-content {
+            font-size: 16px !important;
+          }
+          .mobile-card .ant-statistic-content-value {
+            font-size: 16px !important;
+          }
+        }
+      `}</style>
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <div className="min-w-0">
           <Title level={2} className="mb-2">Dashboard</Title>
           <Text type="secondary">Overview of your VA ERP system</Text>
         </div>
-        <Space>
+        <Space wrap>
           <Select
             value={timeFilter}
             onChange={handleTimeFilterChange}
@@ -266,6 +283,7 @@ const Dashboard = () => {
               value={dateRange}
               onChange={setDateRange}
               format="YYYY-MM-DD"
+              style={{ width: '100%' }}
             />
           )}
         </Space>
@@ -296,45 +314,45 @@ const Dashboard = () => {
       )}
 
       {/* Financial Overview */}
-      <Row gutter={16}>
-        <Col xs={24} sm={8}>
-          <Card>
+      <Row gutter={[8, 8]}>
+        <Col xs={24} sm={12} md={8}>
+          <Card size="small" className="mobile-card">
             <Statistic
               title="Total Salary Paid"
               value={financialData.totalSalaryPaid}
               prefix={<DollarOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              valueStyle={{ color: '#52c41a', fontSize: '16px' }}
               formatter={(value) => `₹${value.toLocaleString()}`}
             />
-            <Text type="secondary" className="text-sm">
+            <Text type="secondary" className="text-xs">
               {dayjs(dateRange[0]).format('DD/MM/YYYY')} - {dayjs(dateRange[1]).format('DD/MM/YYYY')}
             </Text>
           </Card>
         </Col>
-        <Col xs={24} sm={8}>
-          <Card>
+        <Col xs={24} sm={12} md={8}>
+          <Card size="small" className="mobile-card">
             <Statistic
               title="Purchase Order Amount"
               value={financialData.totalPOAmount}
               prefix={<FileTextOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              valueStyle={{ color: '#1890ff', fontSize: '16px' }}
               formatter={(value) => `₹${value.toLocaleString()}`}
             />
-            <Text type="secondary" className="text-sm">
+            <Text type="secondary" className="text-xs">
               {dayjs(dateRange[0]).format('DD/MM/YYYY')} - {dayjs(dateRange[1]).format('DD/MM/YYYY')}
             </Text>
           </Card>
         </Col>
-        <Col xs={24} sm={8}>
-          <Card>
+        <Col xs={24} sm={12} md={8}>
+          <Card size="small" className="mobile-card">
             <Statistic
               title="Total Diesel Used"
               value={financialData.totalDieselUsed}
               prefix={<FireOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              valueStyle={{ color: '#faad14', fontSize: '16px' }}
               formatter={(value) => `${value.toLocaleString()}L`}
             />
-            <Text type="secondary" className="text-sm">
+            <Text type="secondary" className="text-xs">
               {dayjs(dateRange[0]).format('DD/MM/YYYY')} - {dayjs(dateRange[1]).format('DD/MM/YYYY')}
             </Text>
           </Card>
@@ -342,71 +360,76 @@ const Dashboard = () => {
       </Row>
 
       {/* Quick Stats */}
-      <Row gutter={16}>
-        <Col xs={24} sm={6}>
+      <Row gutter={[8, 8]}>
+        <Col xs={12} sm={6}>
           <Card 
             hoverable 
             onClick={() => handleNavigation('/employee/list')}
-            className="cursor-pointer"
+            className="cursor-pointer mobile-card"
+            size="small"
           >
             <Statistic
               title="Employees"
               value={stats.employees}
               prefix={<UserOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              valueStyle={{ color: '#1890ff', fontSize: '18px' }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={6}>
+        <Col xs={12} sm={6}>
           <Card 
             hoverable 
             onClick={() => handleNavigation('/vehicle')}
-            className="cursor-pointer"
+            className="cursor-pointer mobile-card"
+            size="small"
           >
             <Statistic
               title="Vehicles"
               value={stats.vehicles}
               prefix={<CarOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              valueStyle={{ color: '#52c41a', fontSize: '18px' }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={6}>
+        <Col xs={12} sm={6}>
           <Card 
             hoverable 
             onClick={() => handleNavigation('/site')}
-            className="cursor-pointer"
+            className="cursor-pointer mobile-card"
+            size="small"
           >
             <Statistic
               title="Sites"
               value={stats.sites}
               prefix={<HomeOutlined />}
-              valueStyle={{ color: '#722ed1' }}
+              valueStyle={{ color: '#722ed1', fontSize: '18px' }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={6}>
+        <Col xs={12} sm={6}>
           <Card 
             hoverable 
             onClick={() => handleNavigation('/supplier')}
-            className="cursor-pointer"
+            className="cursor-pointer mobile-card"
+            size="small"
           >
             <Statistic
               title="Suppliers"
               value={stats.suppliers}
               prefix={<ShopOutlined />}
-              valueStyle={{ color: '#fa8c16' }}
+              valueStyle={{ color: '#fa8c16', fontSize: '18px' }}
             />
           </Card>
         </Col>
       </Row>
 
       {/* Today's Attendance */}
-      <Card title="Today's Attendance" extra={<Button onClick={() => handleNavigation('/employee/attendance')}>View All</Button>}>
+      <Card title="Today's Attendance" extra={<Button size="small" onClick={() => handleNavigation('/employee/attendance')}>View All</Button>}>
         <Table
           dataSource={todayAttendance}
           pagination={false}
           size="small"
+          scroll={{ x: 600 }}
           columns={[
             {
               title: "Employee",
@@ -424,6 +447,7 @@ const Dashboard = () => {
             {
               title: "Site",
               key: "site",
+              responsive: ['md'],
               render: (_, record) => record.site?.siteName || 'Unknown',
             },
             {
@@ -444,6 +468,7 @@ const Dashboard = () => {
               title: "Salary",
               dataIndex: "salary",
               key: "salary",
+              responsive: ['md'],
               render: (salary) => salary ? `₹${salary.toLocaleString()}` : '-',
             },
           ]}

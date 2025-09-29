@@ -7,6 +7,7 @@ import lightLogo from "../assets/hi.jpg";
 import { getUserRole, getUsername } from "../service/auth";
 import api from "../service/api";
 
+
 const { Text } = Typography;
 
 const navArray = [
@@ -120,7 +121,9 @@ export default function Layout() {
         <div className="flex items-center pl-6">
           <img src={vaLogo} className="h-10 w-auto" />
         </div>
-
+        {/* <span
+        className="dev"
+        >Developed by <a href="https://instagram.com/last_autumnleaf/">:)</a> aravindh</span> */}
         <div className="relative pr-6 flex items-center gap-3 text-white/90">
           {/* Service Alerts Notification */}
           <Dropdown
@@ -238,7 +241,7 @@ export default function Layout() {
 
       <div className="flex min-h-[calc(100vh-4rem)] pt-16">
         {/* Main Sidebar */}
-        <aside className="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col fixed left-0 top-16 bottom-0 z-40">
+        <aside className="hidden sm:flex w-64 bg-white shadow-lg border-r border-gray-200 flex-col fixed left-0 top-16 bottom-0 z-40">
           <div className="p-4 flex-1 overflow-y-auto sidebar-scroll">
             
             <div className="flex flex-col space-y-1">
@@ -288,7 +291,7 @@ export default function Layout() {
 
         {/* Sub Sidebar */}
         {activeMenu && (
-          <aside className="w-56 bg-gray-50 border-r border-gray-200 fixed left-64 top-16 bottom-0 z-30">
+          <aside className="hidden sm:block w-56 bg-gray-50 border-r border-gray-200 fixed left-64 top-16 bottom-0 z-30">
             <div className="p-4 h-full overflow-y-auto sidebar-scroll">
               <div className="mb-4">
                 <h3 className="text-gray-500 text-xs font-semibold uppercase tracking-wide">
@@ -320,7 +323,7 @@ export default function Layout() {
         )}
 
         {/* Main content area */}
-        <main className={`flex-1 bg-gray-50 flex flex-col ${activeMenu ? 'ml-56' : 'ml-64'} pb-16 main-content-scroll`}>
+        <main className={`flex-1 bg-gray-50 flex flex-col ${activeMenu ? 'sm:ml-56' : 'sm:ml-64'} pb-16 main-content-scroll`}>
           <div className="p-6 flex-1">
             <Outlet />
           </div>
