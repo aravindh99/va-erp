@@ -32,15 +32,14 @@ const Compressor = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
-    startingRPM: {
+    compressorRPM: {
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: null,
     },
-    currentRPM: {
+    nextServiceRPM: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      defaultValue: null,
     },
     ...commonFields,
   },

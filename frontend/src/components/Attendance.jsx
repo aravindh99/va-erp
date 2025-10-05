@@ -155,10 +155,9 @@ const Attendance = () => {
       const prevEntry = prev[employeeId] || {};
       const nextEntry = { ...prevEntry, [field]: value };
 
-      // Business rule: if absent, force non-working and zero salary, and lock them
+      // Business rule: if absent, force non-working (but allow salary to be set manually)
       if (field === 'presence' && value === 'absent') {
         nextEntry.workStatus = 'non-working';
-        nextEntry.salary = 0;
       }
 
       return {
@@ -237,7 +236,6 @@ const Attendance = () => {
       const next = { ...prev, [field]: value };
       if (field === 'presence' && value === 'absent') {
         next.workStatus = 'non-working';
-        next.salary = 0;
       }
       return next;
     });
@@ -427,28 +425,16 @@ const Attendance = () => {
     },
     {
       title: "Advance Amount",
-      key: "advanceAmount",
+      key: "advancedAmount",
       render: (_, record) => {
         const employee = employees.find(emp => emp.id === record.employeeId);
-        return (
-          <Text strong style={{ color: '#1890ff' }}>
-            ₹{employee?.advancedAmount?.toLocaleString() || 0}
-          </Text>
-        );
-      },
-    },
-    {
-      title: "Remaining Amount",
-      key: "remainingAmount",
-      render: (_, record) => {
-        const employee = employees.find(emp => emp.id === record.employeeId);
-        const remaining = employee?.remainingAmount || 0;
+        const advance = employee?.advancedAmount || 0;
         return (
           <Text 
             strong 
-            style={{ color: remaining > 0 ? '#ff4d4f' : '#52c41a' }}
+            style={{ color: advance > 0 ? '#ff4d4f' : '#52c41a' }}
           >
-            ₹{remaining.toLocaleString()}
+            ₹{advance.toLocaleString()}
           </Text>
         );
       },
@@ -553,7 +539,6 @@ const Attendance = () => {
               min={0}
               formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               parser={value => value.replace(/₹\s?|(,*)/g, '')}
-              disabled={inlineEdit.presence === 'absent' || inlineEdit.workStatus === 'non-working'}
             />
           </Col>
         </Row>
@@ -662,7 +647,6 @@ const Attendance = () => {
             min={0}
             formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
             parser={value => value.replace(/₹\s?|(,*)/g, '')}
-            disabled={(attendanceData[employee.id]?.presence || 'present') === 'absent' || (attendanceData[employee.id]?.workStatus || 'working') === 'non-working'}
           />
         );
       },
@@ -715,30 +699,21 @@ const Attendance = () => {
     },
     {
       title: "Advance Amount",
-      key: "advanceAmount",
-      render: (_, employee) => (
-        <Text strong style={{ color: '#1890ff' }}>
-          ₹{(employee.advancedAmount || 0).toLocaleString()}
-        </Text>
-      ),
-    },
-    {
-      title: "Remaining Amount",
-      key: "remainingAmount",
+      key: "advancedAmount",
       render: (_, employee) => {
-        const remaining = employee.remainingAmount || 0;
+        const advance = employee.advancedAmount || 0;
         return (
           <Text 
             strong 
             style={{ 
-              color: remaining > 0 ? '#52c41a' : '#ff4d4f',
-              backgroundColor: remaining > 0 ? '#f6ffed' : '#fff2f0',
+              color: advance > 0 ? '#ff4d4f' : '#52c41a',
+              backgroundColor: advance > 0 ? '#fff2f0' : '#f6ffed',
               padding: '2px 8px',
               borderRadius: '4px',
               fontSize: '12px'
             }}
           >
-            ₹{remaining.toLocaleString()}
+            ₹{advance.toLocaleString()}
           </Text>
         );
       },

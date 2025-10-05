@@ -128,9 +128,9 @@ const VehicleServiceHistory = () => {
 
   const totalServices = services.length;
   const lastService = services[0]; // Assuming sorted by date desc
-  const nextServiceRPM = vehicle?.vehicleServiceSchedule?.[0] || 0;
+  const nextServiceRPM = vehicle?.nextServiceRPM || 0;
   const currentRPM = vehicle?.vehicleRPM || 0;
-  const remainingRPM = nextServiceRPM - currentRPM;
+  const remainingRPM = nextServiceRPM ? Math.max(0, nextServiceRPM - currentRPM) : 0;
 
   return (
     <div className="bg-white rounded-lg shadow p-6">

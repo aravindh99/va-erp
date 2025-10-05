@@ -61,8 +61,8 @@ const CompressorManagement = () => {
         status: values.status,
         serialNumber: values.serialNumber || null,
         purchaseDate: values.purchaseDate ? values.purchaseDate.format("YYYY-MM-DD") : null,
-        startingRPM: values.startingRPM ?? null,
-        currentRPM: values.currentRPM ?? null,
+        compressorRPM: values.compressorRPM ?? null,
+        nextServiceRPM: values.nextServiceRPM ?? null,
       };
 
       if (editingId) {
@@ -89,6 +89,7 @@ const CompressorManagement = () => {
     form.setFieldsValue({
       ...record,
       purchaseDate: record.purchaseDate ? dayjs(record.purchaseDate) : null,
+      nextServiceRPM: record.nextServiceRPM ?? undefined,
     });
   };
 
@@ -127,6 +128,8 @@ const CompressorManagement = () => {
               <tr>
                 <th>Compressor Name</th>
                 <th>Type</th>
+                <th>Compressor RPM</th>
+                <th>Next Service RPM</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -140,6 +143,8 @@ const CompressorManagement = () => {
                 <tr>
                   <td>${compressor.compressorName}</td>
                   <td>${compressor.compressorType}</td>
+                  <td>${compressor.compressorRPM || 0}</td>
+                  <td>${compressor.nextServiceRPM || '-'}</td>
                   <td>${compressor.status}</td>
                 </tr>`
         )
@@ -165,16 +170,16 @@ const CompressorManagement = () => {
       render: (date) => date ? new Date(date).toLocaleDateString() : '-',
     },
     {
-      title: "Starting RPM",
-      dataIndex: "startingRPM",
-      key: "startingRPM",
+      title: "Compressor RPM",
+      dataIndex: "compressorRPM",
+      key: "compressorRPM",
       render: (value) => value || 0,
     },
     {
-      title: "Current RPM",
-      dataIndex: "currentRPM",
-      key: "currentRPM",
-      render: (value) => value || 0,
+      title: "Next Service RPM",
+      dataIndex: "nextServiceRPM",
+      key: "nextServiceRPM",
+      render: (value) => value || '-',
     },
     {
       title: "Status",
@@ -297,26 +302,22 @@ const CompressorManagement = () => {
                 <DatePicker className="w-full" />
               </Form.Item>
               <Form.Item
-                name="startingRPM"
-                label="Starting RPM"
+                name="compressorRPM"
+                label="Compressor RPM"
                 rules={[{ type: 'number', min: 0 }]}
               >
                 <InputNumber
                   className="w-full"
                   min={0}
-                  placeholder="Enter starting RPM"
+                  placeholder="Enter compressor RPM"
                 />
               </Form.Item>
               <Form.Item
-                name="currentRPM"
-                label="Current RPM"
-                rules={[{ type: 'number', min: 0 }]}
+                name="nextServiceRPM"
+                label="Next Service RPM"
+                tooltip="Enter the RPM at which the next service is due"
               >
-                <InputNumber
-                  className="w-full"
-                  min={0}
-                  placeholder="Enter current RPM"
-                />
+                <InputNumber className="w-full" min={0} placeholder="e.g., 1000" />
               </Form.Item>
             </div>
             <Form.Item>

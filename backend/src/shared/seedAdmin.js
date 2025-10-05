@@ -11,15 +11,13 @@ export async function seedAdminUser() {
       );
 
       await User.create({
-        username: "admin",
+        username: "xtown",
         password: hashedPassword,
         role: "admin",
         createdBy: "system",
       });
 
-      console.log("✅ Admin user created pass : admin123");
     } else {
-      console.log("ℹ️ Admin user already exist pass : admin123");
     }
   } catch (err) {
     console.error("❌ Error seeding admin user:", err);

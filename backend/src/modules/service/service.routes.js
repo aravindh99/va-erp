@@ -17,6 +17,7 @@ router.post(
   ServiceController.create
 );
 router.get("/", authorize("read"), ServiceController.getAll);
+router.get("/history", authorize("read"), ServiceController.getServiceHistory);
 router.get("/:id", authorize("read"), ServiceController.getById);
 router.put(
   "/:id",

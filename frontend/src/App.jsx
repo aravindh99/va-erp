@@ -28,7 +28,7 @@ import ServiceManagement from "./components/ServiceManagement";
 import AddressManagement from "./components/AddressManagement";
 import InventoryManagement from "./components/InventoryManagement";
 import ProductionReport from "./components/ProductionReport";
-import PurchaseOrderReport from "./components/PurchaseOrderReport";
+import ItemInstanceManagement from "./components/ItemInstanceManagement";
 import EmployeeDetails from "./components/EmployeeDetails";
 import NotFound from "./components/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -60,6 +60,7 @@ function App() {
             <Route path="service-management" element={<ServiceManagement />} />
             <Route path="user-management" element={<UserManagement />} />
             <Route path="address" element={<AddressManagement />} />
+            <Route path="item-instances" element={<ItemInstanceManagement />} />
 
             {/* Employee sub-routes */}
             <Route path="employee/attendance" element={<Attendance />} />
@@ -73,7 +74,6 @@ function App() {
             <Route path="reports" element={<Reports />} />
             <Route path="reports/item-stock" element={<ItemStockReport />} />
             <Route path="reports/production" element={<ProductionReport />} />
-            <Route path="reports/purchase-order" element={<PurchaseOrderReport />} />
             <Route path="reports/vehicle-service/:vehicleId" element={<VehicleServiceHistory />} />
             <Route path="reports/compressor-service/:compressorId" element={<CompressorServiceHistory />} />
           </Route>

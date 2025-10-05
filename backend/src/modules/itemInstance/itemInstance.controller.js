@@ -321,6 +321,58 @@ class ItemInstanceController extends BaseController {
     }
   };
 
+  // Get available item instances (in_stock)
+  getAvailable = async (req, res, next) => {
+    try {
+      const instances = await ItemInstance.findAll({
+        where: { status: "in_stock" },
+        include: [
+          {
+            model: Item,
+            as: "item",
+            attributes: ["id", "itemName", "partNumber", "groupName", "units", "canBeFitted"],
+          },
+        ],
+        order: [['createdAt', 'DESC']]
+      });
+
+      return res.json({
+        success: true,
+        data: instances,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  // Get fitted instances for a specific vehicle
+  getFittedByVehicle = async (req, res, next) => {
+    try {
+      const { vehicleId } = req.params;
+      const instances = await ItemInstance.findAll({
+        where: { 
+          fittedToVehicleId: vehicleId, 
+          status: "fitted" 
+        },
+        include: [
+          {
+            model: Item,
+            as: "item",
+            attributes: ["id", "itemName", "partNumber", "groupName", "units", "canBeFitted"],
+          },
+        ],
+        order: [['fittedDate', 'DESC']]
+      });
+
+      return res.json({
+        success: true,
+        data: instances,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   // Get service alerts for item instances
   getServiceAlerts = async (req, res, next) => {
     try {
@@ -365,6 +417,40 @@ class ItemInstanceController extends BaseController {
       return res.json({
         success: true,
         data: alerts,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  // Hard delete an item instance
+  delete = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      
+      // Check if instance exists
+      const instance = await ItemInstance.findByPk(id);
+      if (!instance) {
+        return res.status(404).json({
+          success: false,
+          message: "Item instance not found"
+        });
+      }
+
+      // Check if instance is currently fitted
+      if (instance.status === 'fitted') {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot delete fitted item instance. Please remove it from the machine first."
+        });
+      }
+
+      // Hard delete the instance
+      await instance.destroy();
+
+      return res.json({
+        success: true,
+        message: "Item instance deleted successfully"
       });
     } catch (error) {
       next(error);

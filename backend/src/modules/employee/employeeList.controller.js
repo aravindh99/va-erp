@@ -15,17 +15,16 @@ class EmployeeListCustomController extends BaseController {
     super(EmployeeCrud, "Employee");
   }
 
-  // Override create method to properly initialize remainingAmount
+  // Override create method to properly initialize advancedAmount
   create = async (req, res, next) => {
     try {
       const { advancedAmount, ...otherData } = req.body;
       const createdBy = req.user.username;
 
-      // Set remainingAmount to advancedAmount initially
+      // Set advancedAmount
       const employeeData = {
         ...otherData,
         advancedAmount: advancedAmount || 0,
-        remainingAmount: advancedAmount || 0,
         createdBy
       };
 
@@ -48,26 +47,11 @@ class EmployeeListCustomController extends BaseController {
       const { advancedAmount, ...otherData } = req.body;
       const updatedBy = req.user.username;
 
-      // If advancedAmount is being updated, recalculate remainingAmount
-      if (advancedAmount !== undefined) {
-        const employee = await EmployeeList.findByPk(id);
-        if (employee) {
-          // Calculate how much has been deducted so far
-          const deductedAmount = (employee.advancedAmount || 0) - (employee.remainingAmount || 0);
-          const newRemainingAmount = Math.max(0, advancedAmount - deductedAmount);
-          
-          await employee.update({
-            ...otherData,
-            advancedAmount,
-            remainingAmount: newRemainingAmount,
-            updatedBy
-          });
-        } else {
-          return res.status(404).json({ success: false, message: "Employee not found" });
-        }
-      } else {
-        await EmployeeList.update({ ...otherData, updatedBy }, { where: { id } });
-      }
+      // Update employee with new data including advancedAmount
+      await EmployeeList.update(
+        { ...otherData, advancedAmount: advancedAmount || 0, updatedBy },
+        { where: { id } }
+      );
 
       const updatedEmployee = await EmployeeList.findByPk(id);
       
@@ -145,7 +129,7 @@ class EmployeeListCustomController extends BaseController {
             totalAbsent: attendances.filter(a => a.presence === 'absent').length,
             totalSalaryPaid,
             totalAdvanceTaken: employee.advancedAmount || 0,
-            currentBalance: employee.remainingAmount || 0,
+            currentBalance: employee.advancedAmount || 0,
             uniqueSitesCount: uniqueSites.length,
             uniqueVehiclesCount: uniqueVehicles.length,
           }

@@ -85,7 +85,6 @@ const EmployeeList = () => {
           : null,
         status: values.status,
         advancedAmount: values.advancedAmount ? Number(values.advancedAmount) : 0,
-        remainingAmount: values.advancedAmount ? Number(values.advancedAmount) : 0,
       };
 
       if (editingId) {
@@ -116,7 +115,7 @@ const EmployeeList = () => {
     form.setFieldsValue({
       ...record,
       joiningDate: record.joiningDate ? dayjs(record.joiningDate) : null,
-      remainingAmount: record.remainingAmount || record.advancedAmount || 0,
+      advancedAmount: record.advancedAmount || 0,
     });
   };
 
@@ -218,19 +217,6 @@ const EmployeeList = () => {
       key: "advancedAmount",
       render: (amount) => (
         <Typography.Text strong>
-          ₹{amount ? Number(amount).toLocaleString() : '0'}
-        </Typography.Text>
-      ),
-    },
-    {
-      title: "Remaining Amount",
-      dataIndex: "remainingAmount",
-      key: "remainingAmount",
-      render: (amount) => (
-        <Typography.Text 
-          strong 
-          type={amount > 0 ? "danger" : "success"}
-        >
           ₹{amount ? Number(amount).toLocaleString() : '0'}
         </Typography.Text>
       ),

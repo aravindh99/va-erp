@@ -37,7 +37,6 @@ export class EmployeeAttendanceController extends BaseController {
         whereClause.siteId = siteId;
       }
       
-      console.log('EmployeeAttendance query filters:', whereClause);
       
       const items = await this.service.getAll(page, limit, {
         where: whereClause,
@@ -81,14 +80,13 @@ export class EmployeeAttendanceController extends BaseController {
       if (salary && salary > 0) {
         const employee = await EmployeeList.findByPk(employeeId, { transaction });
         if (employee) {
-          const currentRemaining = Number(employee.remainingAmount) || 0;
+          const currentAdvance = Number(employee.advancedAmount) || 0;
           const salaryNumber = Number(salary) || 0;
-          const deduction = Math.min(salaryNumber, currentRemaining);
-          const newRemaining = currentRemaining - deduction;
+          const newAdvanceAmount = Math.max(0, currentAdvance - salaryNumber);
 
-          if (deduction > 0) {
+          if (currentAdvance > 0) {
             await employee.update({
-              remainingAmount: newRemaining,
+              advancedAmount: newAdvanceAmount,
               updatedBy: username
             }, { transaction });
           }
@@ -133,19 +131,18 @@ export class EmployeeAttendanceController extends BaseController {
       if (salary !== undefined && salary !== existingAttendance.salary) {
         const employee = await EmployeeList.findByPk(employeeId, { transaction });
         if (employee) {
-          const currentRemaining = Number(employee.remainingAmount) || 0;
+          const currentAdvance = Number(employee.advancedAmount) || 0;
           const previousSalary = Number(existingAttendance.salary) || 0;
           const newSalary = Number(salary) || 0;
           const salaryDifference = newSalary - previousSalary;
 
           // Only deduct when increasing salary; never re-credit on decrease
           if (salaryDifference > 0) {
-            const deduction = Math.min(salaryDifference, currentRemaining);
-            const newRemaining = currentRemaining - deduction;
+            const newAdvanceAmount = Math.max(0, currentAdvance - salaryDifference);
 
-            if (deduction > 0) {
+            if (currentAdvance > 0) {
               await employee.update({
-                remainingAmount: newRemaining,
+                advancedAmount: newAdvanceAmount,
                 updatedBy: username
               }, { transaction });
             }
@@ -177,11 +174,11 @@ export class EmployeeAttendanceController extends BaseController {
         return res.status(404).json({ success: false, message: "Employee not found" });
       }
 
-      const currentRemaining = employee.remainingAmount || 0;
-      const newRemaining = Math.max(0, currentRemaining - salaryAmount);
+      const currentAdvance = employee.advancedAmount || 0;
+      const newAdvanceAmount = Math.max(0, currentAdvance - salaryAmount);
 
       await employee.update({
-        remainingAmount: newRemaining,
+        advancedAmount: newAdvanceAmount,
         updatedBy
       });
 
@@ -191,9 +188,9 @@ export class EmployeeAttendanceController extends BaseController {
         data: {
           employeeId,
           salaryAmount,
-          previousRemaining: currentRemaining,
-          newRemaining: newRemaining,
-          deducted: currentRemaining - newRemaining
+          previousAdvance: currentAdvance,
+          newAdvanceAmount: newAdvanceAmount,
+          deducted: currentAdvance - newAdvanceAmount
         }
       });
     } catch (error) {

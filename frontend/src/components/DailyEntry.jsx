@@ -20,17 +20,12 @@ import {
   Divider,
   Collapse,
   Tooltip,
-  Progress,
   Modal,
 } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  ExclamationCircleOutlined,
-  InfoCircleOutlined,
-  CarOutlined,
-  SettingOutlined,
 } from "@ant-design/icons";
 import api from "../service/api";
 import { canEdit, canDelete } from "../service/auth";
@@ -60,8 +55,6 @@ const DailyEntry = () => {
   const [notifications, setNotifications] = useState([]);
   const [items, setItems] = useState([]);
   const [fittedItems, setFittedItems] = useState([]);
-  // RemovedItems deprecated: removal managed within fitted items UI
-  const [removedItems, setRemovedItems] = useState([]); // kept to avoid runtime errors; no longer rendered
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [selectedCompressor, setSelectedCompressor] = useState(null);
   const [serviceAlerts, setServiceAlerts] = useState([]);
@@ -71,25 +64,20 @@ const DailyEntry = () => {
     compressorOpening: 0,
     compressorClosing: 0,
   });
-  const [showItemForm, setShowItemForm] = useState(false);
-  const [showRemoveItemForm, setShowRemoveItemForm] = useState(false);
   const [availableItems, setAvailableItems] = useState([]);
-  const [fittedItemsList, setFittedItemsList] = useState([]);
+  const [showFitItemModal, setShowFitItemModal] = useState(false);
+  const [selectedItemInstances, setSelectedItemInstances] = useState([]);
 
   // Fetch data
   const fetchEntries = async (page = 1, limit = 10) => {
     setLoading(true);
     try {
-      console.log("Fetching daily entries with:", { page, limit });
       let res;
 
       try {
         res = await api.get(`/api/dailyEntries?page=${page}&limit=${limit}`);
-        console.log("Daily entries response (with pagination):", res.data);
       } catch (paginationError) {
-        console.log("Pagination not supported, trying without pagination");
         res = await api.get("/api/dailyEntries");
-        console.log("Daily entries response (without pagination):", res.data);
       }
 
       setEntries(res.data.data || []);
@@ -160,6 +148,7 @@ const DailyEntry = () => {
     fetchCompressors();
     fetchEmployees();
     fetchItems();
+    fetchAvailableItems();
   }, []);
 
   // Auto-generate reference number
@@ -178,15 +167,45 @@ const DailyEntry = () => {
     const machine = machines.find(m => m.id === machineId);
     setSelectedMachine(machine);
 
-    if (machine && machine.compressorId) {
-      const compressor = compressors.find(c => c.id === machine.compressorId);
-      setSelectedCompressor(compressor);
+    // Check if machine is crawler type
+    const isCrawler = machine && machine.vehicleType.toLowerCase().includes('crawler');
+
+    if (isCrawler) {
+      // Auto-fill machine opening RPM for crawler machines
+      if (machine && machine.vehicleRPM) {
+        form.setFieldValue('vehicleOpeningRPM', machine.vehicleRPM);
+      }
+
+      if (machine && machine.compressorId) {
+        const compressor = compressors.find(c => c.id === machine.compressorId);
+        setSelectedCompressor(compressor);
+        
+        // Auto-select compressor in form
+        form.setFieldValue('compressorId', machine.compressorId);
+        
+        // Auto-fill compressor opening RPM
+        if (compressor && compressor.compressorRPM) {
+          form.setFieldValue('compressorOpeningRPM', compressor.compressorRPM);
+        }
+      } else {
+        setSelectedCompressor(null);
+        form.setFieldValue('compressorId', null);
+      }
     } else {
+      // Set RPM to 0 for non-crawler machines (camper, truck, etc.)
+      form.setFieldValue('vehicleOpeningRPM', 0);
+      form.setFieldValue('vehicleClosingRPM', 0);
+      form.setFieldValue('compressorOpeningRPM', 0);
+      form.setFieldValue('compressorClosingRPM', 0);
       setSelectedCompressor(null);
+      form.setFieldValue('compressorId', null);
     }
 
     // Check for service alerts
     checkServiceAlerts(machine);
+    
+    // Fetch fitted items for this machine
+    fetchFittedItems(machineId);
   };
 
   // Handle RPM field changes for real-time calculation
@@ -276,17 +295,50 @@ const DailyEntry = () => {
     setServiceAlerts(alerts);
   };
 
+  // Fetch fitted items for selected machine
+  const fetchFittedItems = async (vehicleId) => {
+    if (!vehicleId) {
+      setFittedItems([]);
+      return;
+    }
+    try {
+      const response = await api.get(`/api/itemInstances/fitted/${vehicleId}`);
+      setFittedItems(response.data.data || []);
+    } catch (err) {
+      console.error("Error fetching fitted items", err);
+    }
+  };
+
+  // Fetch available items for fitting
+  const fetchAvailableItems = async () => {
+    try {
+      const response = await api.get("/api/itemInstances/available");
+      setAvailableItems(response.data.data || []);
+    } catch (err) {
+      console.error("Error fetching available items", err);
+    }
+  };
+
+  // Remove fitted item
+  const removeFittedItem = (instanceId) => {
+    setFittedItems(prev => prev.filter(item => item.id !== instanceId));
+  };
+
+  // Handle fitting items
+  const handleFitItems = () => {
+    const newFittedItems = availableItems.filter(item => 
+      selectedItemInstances.includes(item.id)
+    );
+    setFittedItems(prev => [...prev, ...newFittedItems]);
+    setSelectedItemInstances([]);
+    setShowFitItemModal(false);
+  };
+
   // Handle form submit
   const handleSubmit = async (values) => {
     try {
       const refNo = values.refNo || await generateRefNo();
 
-      // Debug form values
-      console.log("Form values received:", values);
-      console.log("Fitted items from state:", fittedItems);
-      console.log("Additional employee IDs:", values.additionalEmployeeIds);
-      console.log("Notes value:", values.notes);
-      console.log("Notes type:", typeof values.notes);
       
       // Ensure we have valid form values
       const formValues = {
@@ -295,7 +347,6 @@ const DailyEntry = () => {
         additionalEmployeeIds: values.additionalEmployeeIds || [],
       };
       
-      console.log("Processed form values:", formValues);
 
       const payload = {
         refNo,
@@ -317,19 +368,13 @@ const DailyEntry = () => {
         vehicleServiceDone: Boolean(formValues.vehicleServiceDone),
         compressorServiceDone: Boolean(formValues.compressorServiceDone),
         notes: String(formValues.notes || ""),
-        fittedItems: Array.isArray(fittedItems) ? fittedItems : [],
-        removedItems: Array.isArray(removedItems) ? removedItems : [],
+        fittedItemInstanceIds: fittedItems.map(item => item.id),
+        removedItemInstanceIds: [], // For now, we'll handle removal through the UI
       };
 
-      console.log("daily entry Payload before submit:", payload);
-      console.log("Payload notes:", payload.notes);
-      console.log("Payload additionalEmployeeIds:", payload.additionalEmployeeIds);
-      console.log("Payload fittedItems:", payload.fittedItems);
 
       if (editingId) {
-        console.log("Updating daily entry");
         const res = await api.put(`/api/dailyEntries/${editingId}`, payload);
-        console.log("Update response:", res.data);
         setEntries(entries.map(entry => entry.id === editingId ? res.data.data : entry));
 
         if (res.data.notifications) {
@@ -339,9 +384,7 @@ const DailyEntry = () => {
           });
         }
       } else {
-        console.log("Creating new daily entry");
         const res = await api.post("/api/dailyEntries", payload);
-        console.log("Create response:", res.data);
         setEntries([res.data.data, ...entries]);
 
         if (res.data.notifications) {
@@ -356,7 +399,6 @@ const DailyEntry = () => {
       setEditingId(null);
       form.resetFields();
       setFittedItems([]);
-      setRemovedItems([]);
       setSelectedMachine(null);
       setSelectedCompressor(null);
       setServiceAlerts([]);
@@ -379,13 +421,6 @@ const DailyEntry = () => {
       notes: record.notes || "",
       additionalEmployeeIds: record.additionalEmployeeIds || [],
     });
-
-    // Set spare parts (fitted items) from the record
-    if (record.fittedItems && Array.isArray(record.fittedItems)) {
-      setFittedItems(record.fittedItems);
-    } else {
-      setFittedItems([]);
-    }
 
     if (record.vehicleId) {
       handleMachineChange(record.vehicleId);
@@ -485,15 +520,18 @@ const DailyEntry = () => {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => {
-                setShowForm(true);
+              onClick={async () => {
                 setEditingId(null);
                 form.resetFields();
                 setFittedItems([]);
-                setRemovedItems([]);
                 setSelectedMachine(null);
                 setSelectedCompressor(null);
                 setServiceAlerts([]);
+                
+                // Auto-generate reference number for new entry
+                const refNo = await generateRefNo();
+                form.setFieldValue('refNo', refNo);
+                setShowForm(true);
               }}
             >
               Add Daily Entry
@@ -562,9 +600,12 @@ const DailyEntry = () => {
                     <Form.Item
                       name="refNo"
                       label="Reference Number"
-                      rules={[{ required: true, message: "Reference number is required" }]}
                     >
-                      <Input placeholder="VA-001" />
+                      <Input 
+                        placeholder="VA-001" 
+                        readOnly
+                        style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                      />
                     </Form.Item>
                   </Col>
                   <Col xs={24} sm={8}>
@@ -608,7 +649,7 @@ const DailyEntry = () => {
                       >
                         {machines.map((machine) => (
                           <Select.Option key={machine.id} value={machine.id}>
-                            {machine.vehicleType || machine.vehicleNumber}
+                            {machine.vehicleType} ({machine.vehicleNumber})
                           </Select.Option>
                         ))}
                       </Select>
@@ -622,7 +663,6 @@ const DailyEntry = () => {
                       <Select
                         placeholder="Select compressor"
                         disabled={!selectedCompressor}
-                        value={selectedCompressor?.id}
                       >
                         {selectedCompressor && (
                           <Select.Option key={selectedCompressor.id} value={selectedCompressor.id}>
@@ -635,11 +675,12 @@ const DailyEntry = () => {
                 </Row>
               </Panel>
 
-              {/* RPM Tracking */}
-              <Panel header="RPM Tracking" key="rpm">
-                <Row gutter={16}>
-                  <Col xs={24} sm={12}>
-                    <Card title={`${selectedMachine?.vehicleType || 'Machine'} RPM`} size="small">
+              {/* RPM Tracking - Only for Crawler type machines */}
+              {selectedMachine && selectedMachine.vehicleType.toLowerCase().includes('crawler') && (
+                <Panel header="RPM Tracking" key="rpm">
+                  <Row gutter={16}>
+                    <Col xs={24} sm={12}>
+                      <Card title={`${selectedMachine?.vehicleType || 'Machine'} RPM`} size="small">
                       <Row gutter={8}>
                         <Col span={12}>
                           <Form.Item
@@ -759,6 +800,64 @@ const DailyEntry = () => {
                         </Text>
                       </div>
                     </Card>
+                  </Col>
+                </Row>
+              </Panel>
+              )}
+
+              {/* Fitted Items */}
+              <Panel header="Fitted Items" key="fittedItems">
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Card title="Currently Fitted Items" size="small">
+                      <Table
+                        dataSource={fittedItems}
+                        columns={[
+                          { title: "Instance Number", dataIndex: "instanceNumber", key: "instanceNumber" },
+                          { title: "Item Name", dataIndex: ["item", "itemName"], key: "itemName" },
+                          { title: "Part Number", dataIndex: ["item", "partNumber"], key: "partNumber" },
+                          { title: "Current RPM", dataIndex: "currentRPM", key: "currentRPM" },
+                          { 
+                            title: "Service Due", 
+                            key: "serviceDue",
+                            render: (_, record) => {
+                              if (!record.nextServiceRPM) return "-";
+                              const remaining = record.nextServiceRPM - record.currentRPM;
+                              if (remaining <= 0) return "Overdue";
+                              return remaining <= 100 ? `Due soon (${remaining} RPM)` : `${remaining} RPM`;
+                            }
+                          },
+                          {
+                            title: "Actions",
+                            key: "actions",
+                            render: (_, record) => (
+                              <Button 
+                                size="small" 
+                                danger
+                                onClick={() => removeFittedItem(record.id)}
+                              >
+                                Remove
+                              </Button>
+                            )
+                          }
+                        ]}
+                        pagination={false}
+                        size="small"
+                      />
+                    </Card>
+                  </Col>
+                </Row>
+                <Row gutter={16} style={{ marginTop: 16 }}>
+                  <Col span={24}>
+                    <Space>
+                      <Button 
+                        type="dashed" 
+                        icon={<PlusOutlined />}
+                        onClick={() => setShowFitItemModal(true)}
+                      >
+                        Fit New Item
+                      </Button>
+                    </Space>
                   </Col>
                 </Row>
               </Panel>
@@ -908,52 +1007,6 @@ const DailyEntry = () => {
 </Panel>
 
 
-              {/* Spare Parts Management */}
-              <Panel header="Spare Parts Management" key="spares">
-                <Row gutter={16}>
-                  <Col xs={24} sm={12}>
-                    <Card title="Fitted Items" size="small">
-                      <div className="mb-4">
-                        <Button
-                          type="dashed"
-                          onClick={() => setShowItemForm(true)}
-                          className="w-full"
-                          icon={<PlusOutlined />}
-                        >
-                          Add Spare Parts
-                        </Button>
-                      </div>
-                      {fittedItems.length > 0 && (
-                        <div className="space-y-2">
-                          {fittedItems.map((item, index) => (
-                            <div key={index} className="p-2 border rounded bg-gray-50">
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <Text strong>{item.itemName}</Text>
-                                  <br />
-                                  <Text type="secondary" className="text-sm">
-                                    Starting RPM: {item.startingRPM || 0}
-                                  </Text>
-                                </div>
-                                <Button
-                                  size="small"
-                                  danger
-                                  onClick={() => {
-                                    setFittedItems(fittedItems.filter((_, i) => i !== index));
-                                  }}
-                                >
-                                  Remove
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </Card>
-                  </Col>
-
-                </Row>
-              </Panel>
 
               {/* Service Status */}
               <Panel header="Service Status" key="service">
@@ -1012,24 +1065,13 @@ const DailyEntry = () => {
 
             <Divider />
 
-            <div className="flex justify-between">
-              <Button 
-                onClick={() => {
-                  const formValues = form.getFieldsValue();
-                  console.log("Current form values:", formValues);
-                  console.log("Fitted items:", fittedItems);
-                  message.info("Form values logged to console");
-                }}
-              >
-                Test Form Values
-              </Button>
+            <div className="flex justify-end">
               <div className="flex space-x-2">
                 <Button onClick={() => {
                   setShowForm(false);
                   setEditingId(null);
                   form.resetFields();
                   setFittedItems([]);
-                  setRemovedItems([]);
                   setSelectedMachine(null);
                   setSelectedCompressor(null);
                   setServiceAlerts([]);
@@ -1067,57 +1109,66 @@ const DailyEntry = () => {
       </Card>
 
 
-      {/* Add Spare Parts Modal */}
+
+
+      {/* Fit Item Modal */}
       <Modal
-        title="Add Spare Parts"
-        open={showItemForm}
-        onCancel={() => setShowItemForm(false)}
-        footer={null}
+        title="Fit New Item"
+        open={showFitItemModal}
+        onCancel={() => {
+          setShowFitItemModal(false);
+          setSelectedItemInstances([]);
+        }}
+        onOk={handleFitItems}
+        okText="Fit Items"
+        cancelText="Cancel"
         width={800}
       >
-        <div className="space-y-4">
-          <div className="mb-4">
-            <Text type="secondary">Select items that can be fitted to vehicles</Text>
-          </div>
-          <div className="max-h-96 overflow-y-auto">
-            {items.filter(item => item.canBeFitted).map(item => (
-              <div key={item.id} className="p-3 border rounded mb-2 hover:bg-gray-50">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <Text strong>{item.itemName}</Text>
-                    <br />
-                    <Text type="secondary" className="text-sm">
-                      Part: {item.partNumber} | Group: {item.groupName}
-                    </Text>
-                    <br />
-                    <Text type="secondary" className="text-sm">
-                      Current RPM: {item.currentRPM || 0} | Initial RPM: {item.initialRPM || 0}
-                    </Text>
-                  </div>
-                  <Button
-                    type="primary"
-                    size="small"
-                    onClick={() => {
-                      const newItem = {
-                        itemId: item.id,
-                        itemName: item.itemName,
-                        startingRPM: item.currentRPM || 0,
-                        serviceDone: false
-                      };
-                      setFittedItems([...fittedItems, newItem]);
-                      setShowItemForm(false);
+        <div>
+          <p>Select items to fit to this machine:</p>
+          <Table
+            dataSource={availableItems}
+            columns={[
+              {
+                title: "Select",
+                key: "select",
+                render: (_, record) => (
+                  <input
+                    type="checkbox"
+                    checked={selectedItemInstances.includes(record.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedItemInstances(prev => [...prev, record.id]);
+                      } else {
+                        setSelectedItemInstances(prev => prev.filter(id => id !== record.id));
+                      }
                     }}
-                  >
-                    Add
-                  </Button>
-                </div>
-              </div>
-            ))}
+                  />
+                )
+              },
+              { title: "Instance Number", dataIndex: "instanceNumber", key: "instanceNumber" },
+              { title: "Item Name", dataIndex: ["item", "itemName"], key: "itemName" },
+              { title: "Part Number", dataIndex: ["item", "partNumber"], key: "partNumber" },
+              { title: "Current RPM", dataIndex: "currentRPM", key: "currentRPM" },
+              { 
+                title: "Next Service RPM", 
+                key: "nextServiceRPM",
+                render: (_, record) => {
+                  return record.nextServiceRPM || "-";
+                }
+              }
+            ]}
+            pagination={false}
+            size="small"
+            rowKey="id"
+          />
+          <div style={{ marginTop: 16, padding: 12, backgroundColor: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6 }}>
+            <Text type="secondary">
+              Selected items will be fitted to the machine and will start accumulating RPM from daily entries.
+            </Text>
           </div>
         </div>
       </Modal>
-
-
     </div>
   );
 };

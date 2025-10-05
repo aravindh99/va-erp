@@ -42,6 +42,12 @@ const Item = sequelize.define(
       allowNull: false,
       defaultValue: false,
     },
+    // Simple stock quantity tracking
+    stock: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
     ...commonFields,
   },
   {

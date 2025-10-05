@@ -42,11 +42,10 @@ const ItemInstance = sequelize.define(
       allowNull: true,
       defaultValue: 0,
     },
-    // Service schedule for this instance (JSON array of RPM values)
-    serviceSchedule: {
-      type: DataTypes.JSON,
+    // Next service RPM for this instance
+    nextServiceRPM: {
+      type: DataTypes.INTEGER,
       allowNull: true,
-      defaultValue: [],
     },
     // Last service date
     lastServiceDate: {

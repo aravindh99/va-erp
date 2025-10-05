@@ -30,8 +30,6 @@ import { compressorRoutes } from "./src/modules/compressor/index.js";
 import { userRoutes } from "./src/modules/user/index.js";
 import { addressRoutes } from "./src/modules/address/index.js";
 import stockTransactionRoutes from "./src/modules/stockTransaction/stockTransaction.routes.js";
-import itemFittingRoutes from "./src/modules/itemFitting/itemFitting.routes.js";
-import itemServiceRoutes from "./src/modules/itemService/itemService.routes.js";
 import itemInstanceRoutes from "./src/modules/itemInstance/itemInstance.routes.js";
 import { defineAssociations } from "./src/shared/models/associations.js";
 
@@ -55,7 +53,7 @@ const initializeDatabase = async () => {
 
     console.log(Object.keys(sequelize.models));
 
-    await sequelize.sync({ }); // now sync with associations
+    await sequelize.sync({ force: false, alter: true }); // now sync with associations
     await seedAdminUser();
     console.log("✅ Database initialized successfully with associations");
   } catch (error) {
@@ -120,11 +118,6 @@ protectedRoutes.use("/users", userRoutes);
 // Stock Transaction routes
 protectedRoutes.use("/stockTransactions", stockTransactionRoutes);
 
-// Item Fitting routes
-protectedRoutes.use("/itemFitting", itemFittingRoutes);
-
-// Item Service routes
-protectedRoutes.use("/itemServices", itemServiceRoutes);
 
 // Item Instance routes
 protectedRoutes.use("/itemInstances", itemInstanceRoutes);

@@ -243,7 +243,7 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      <style jsx>{`
+      <style jsx="true">{`
         @media (max-width: 640px) {
           .mobile-card .ant-card-body {
             padding: 12px !important;
@@ -384,7 +384,7 @@ const Dashboard = () => {
             size="small"
           >
             <Statistic
-              title="Vehicles"
+              title="Machines"
               value={stats.vehicles}
               prefix={<CarOutlined />}
               valueStyle={{ color: '#52c41a', fontSize: '18px' }}

@@ -9,7 +9,6 @@ export const createEmployeeSchema = z.object({
   status: z.enum(["active", "inactive", "resigned"]).optional(),
 
     advancedAmount: z.number().nonnegative().optional(),
-  remainingAmount: z.number().nonnegative().optional(),
 });
 
 export const updateEmployeeSchema = createEmployeeSchema.partial();

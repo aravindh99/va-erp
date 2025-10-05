@@ -1,10 +1,12 @@
 import Po from "./po.model.js";
 import POItem from "../poItem/poItem.model.js";
+import Supplier from "../supplier/supplier.model.js";
+import Address from "../address/address.model.js";
 import { BaseCrud } from "../../shared/utils/baseCrud.js";
 import { BaseController } from "../../shared/utils/baseController.js";
 import sequelize from "../../config/db.js";
 import Item from "../item/item.model.js";
-import StockTransaction from "../stockTransaction/stockTransaction.model.js";
+import ItemInstance from "../itemInstance/itemInstance.model.js";
 import { Op } from "sequelize";
 
 // 1. Create CRUD service from model
@@ -55,6 +57,8 @@ class PoCustomController extends BaseController {
       const { page = 1, limit = 10 } = req.query;
       const items = await this.service.getAll(page, limit, {
         include: [
+          { model: Supplier, as: "supplier" },
+          { model: Address, as: "address" },
           { model: POItem, as: "poItems", include: [{ model: Item, as: "item" }] },
         ],
       });
@@ -68,6 +72,8 @@ class PoCustomController extends BaseController {
     try {
       const po = await Po.findByPk(req.params.id, {
         include: [
+          { model: Supplier, as: "supplier" },
+          { model: Address, as: "address" },
           { model: POItem, as: "poItems", include: [{ model: Item, as: "item" }] },
         ],
       });
@@ -136,8 +142,8 @@ class PoCustomController extends BaseController {
     }
   };
 
-  // Mark PO as received and update stock
-  markAsReceived = async (req, res, next) => {
+  // Mark PO as received and update item stock
+  receivePO = async (req, res, next) => {
     const t = await sequelize.transaction();
     try {
       const { id } = req.params;
@@ -153,25 +159,18 @@ class PoCustomController extends BaseController {
         return res.status(404).json({ success: false, message: "PO not found" });
       }
 
-      // Update stock for each item
+      if (po.status === 'received') {
+        return res.status(400).json({ success: false, message: "PO already received" });
+      }
+
+      // Process each POItem - just update stock (no item instances created here)
       for (const poItem of po.poItems) {
         const item = poItem.item;
-        const newStock = (item.openingStock || 0) + poItem.quantity;
         
+        // Simply increment stock
         await item.update({
-          openingStock: newStock,
+          stock: (item.stock || 0) + poItem.quantity,
           updatedBy
-        }, { transaction: t });
-
-        // Create stock transaction for received items
-        await StockTransaction.create({
-          itemId: item.id,
-          type: "IN",
-          quantity: poItem.quantity,
-          rate: poItem.rate,
-          reference: "PO_RECEIVED",
-          referenceId: po.id,
-          createdBy: updatedBy
         }, { transaction: t });
       }
 
@@ -186,8 +185,10 @@ class PoCustomController extends BaseController {
       await t.commit();
       return res.json({ 
         success: true, 
-        message: "PO marked as received and stock updated successfully",
-        data: po 
+        message: `PO received successfully. Stock updated for ${po.poItems.length} items.`,
+        data: {
+          po
+        }
       });
     } catch (error) {
       await t.rollback();

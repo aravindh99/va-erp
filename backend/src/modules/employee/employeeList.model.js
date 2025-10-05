@@ -36,13 +36,8 @@ const EmployeeList = sequelize.define(
       allowNull: false,
       defaultValue: "active",
     },
-    // Advanced amount fields
+    // Advanced amount field
     advancedAmount: {
-      type: DataTypes.DECIMAL(12, 2),
-      allowNull: true,
-      defaultValue: null,
-    },
-    remainingAmount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: true,
       defaultValue: null,

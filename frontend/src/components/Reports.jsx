@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Card,
   Row,
@@ -8,7 +7,6 @@ import {
 } from "antd";
 import {
   FileTextOutlined,
-  ShoppingCartOutlined,
   BarChartOutlined,
   PrinterOutlined,
 } from "@ant-design/icons";
@@ -26,13 +24,6 @@ const Reports = () => {
       icon: <FileTextOutlined />,
       path: "/reports/item-stock",
       color: "#1890ff",
-    },
-    {
-      title: "Purchase Order Report",
-      description: "Purchase order management with PDF export functionality",
-      icon: <ShoppingCartOutlined />,
-      path: "/reports/purchase-order",
-      color: "#52c41a",
     },
     {
       title: "Employee Salary Report",
@@ -116,7 +107,7 @@ const Reports = () => {
       <Row gutter={[16, 16]} className="mt-8">
         <Col xs={24} sm={8}>
           <Card className="text-center">
-            <div className="text-3xl font-bold text-blue-600 mb-2">5</div>
+            <div className="text-3xl font-bold text-blue-600 mb-2">4</div>
             <Text type="secondary">Available Reports</Text>
           </Card>
         </Col>

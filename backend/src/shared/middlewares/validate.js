@@ -1,10 +1,6 @@
 export const validate = (schema) => {
   return (req, res, next) => {
     try {
-      console.log(
-        "🔍 Validating request body:",
-        JSON.stringify(req.body, null, 2)
-      );
 
       const result = schema.safeParse(req.body);
 
@@ -22,7 +18,6 @@ export const validate = (schema) => {
         });
       }
 
-      console.log("✅ Validation passed");
       req.body = result.data;
       next();
     } catch (error) {

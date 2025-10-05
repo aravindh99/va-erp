@@ -22,6 +22,7 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
+  FilePdfOutlined,
 } from "@ant-design/icons";
 import api from "../service/api";
 import { canEdit, canDelete } from "../service/auth";
@@ -35,7 +36,6 @@ const PurchaseOrderComplete = () => {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [addresses, setAddresses] = useState([]);
-  const [sites, setSites] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,7 +51,7 @@ const PurchaseOrderComplete = () => {
   const [poItems, setPoItems] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createForm] = Form.useForm();
-  const [gstInclude, setGstInclude] = useState(true);
+  const [gstInclude, setGstInclude] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -64,18 +64,16 @@ const PurchaseOrderComplete = () => {
   const fetchData = async (page = 1, limit = 10) => {
     setLoading(true);
     try {
-      const [posRes, suppliersRes, addressesRes, sitesRes, itemsRes] = await Promise.all([
+      const [posRes, suppliersRes, addressesRes, itemsRes] = await Promise.all([
         api.get(`/api/pos?page=${page}&limit=${limit}`),
         api.get("/api/suppliers"),
         api.get("/api/address"),
-        api.get("/api/sites"),
         api.get("/api/items"),
       ]);
       
       setPurchaseOrders(posRes.data.data || []);
       setSuppliers(suppliersRes.data.data || []);
       setAddresses(addressesRes.data.data || []);
-      setSites(sitesRes.data.data || []);
       setItems(itemsRes.data.data || []);
       
       // Update pagination state
@@ -110,6 +108,11 @@ const PurchaseOrderComplete = () => {
     }
   }, [createForm]);
 
+  // Watch for GST include changes to trigger re-render
+  const handleGstIncludeChange = (value) => {
+    setGstInclude(value);
+  };
+
   // Generate PO number for display
   const generatePONumberForDisplay = async () => {
     try {
@@ -141,7 +144,6 @@ const PurchaseOrderComplete = () => {
           rate: item.rate
         }))
       };
-      console.log("Submitting payload:", payload);
 
 
       if (editingId) {
@@ -152,7 +154,6 @@ const PurchaseOrderComplete = () => {
         const res = await api.post("/api/pos", payload);
         setPurchaseOrders([res.data.data, ...purchaseOrders]);
         message.success("Purchase order created successfully");
-        console.log("Response from server purchase order:", res.data.data);
       }
 
       setShowForm(false);
@@ -208,7 +209,6 @@ const PurchaseOrderComplete = () => {
     supplierId: record.supplierId,
     addressId: record.addressId,
     shippingAddressId: record.shippingAddressId || record.addressId,
-    siteIds: record.sites?.map(site => site.id) || [], // if PO has sites association
     notes: record.notes,
   });
 
@@ -231,14 +231,19 @@ const PurchaseOrderComplete = () => {
     }
   };
 
-  const markAsReceived = async (id) => {
+  const markAsReceived = async (record) => {
     try {
-      await api.post(`/api/pos/${id}/received`);
-      message.success("PO marked as received and stock updated!");
-      fetchPurchaseOrders();
+      const res = await api.post(`/api/pos/${record.id}/receive`);
+      const updated = res?.data?.data?.po;
+      message.success('PO received successfully');
+      if (updated) {
+        setPurchaseOrders((prev) => prev.map((po) => po.id === updated.id ? { ...po, status: updated.status, receivedBy: updated.receivedBy, receivedAt: updated.receivedAt, updatedBy: updated.updatedBy } : po));
+      }
+      fetchData();
     } catch (err) {
-      console.error("Error marking PO as received", err);
-      message.error("Error marking PO as received");
+      console.error("Error receiving PO", err);
+      const msg = err?.response?.data?.message || "Error receiving PO";
+      message.error(msg);
     }
   };
 
@@ -313,16 +318,38 @@ const PurchaseOrderComplete = () => {
     setShowPODetails(true);
   };
 
-  // Generate PO PDF
+  // Generate PO PDF - Exact Format Implementation
   const generatePOPDF = (po) => {
     const printWindow = window.open("", "_blank");
-    const subTotal = po.subTotal || 0;
-    const taxTotal = po.taxTotal || 0;
-    const grandTotal = po.grandTotal || 0;
-
-    // Get billing and shipping addresses
-    const billingAddress = addresses.find(addr => addr.id === po.addressId);
-    const shippingAddress = addresses.find(addr => addr.id === po.shippingAddressId);
+    
+    // Get supplier and address details
+    const supplier = po.supplier;
+    const address = po.address;
+    
+    // Calculate totals
+    let subTotal = 0;
+    let totalGST = 0;
+    let grandTotal = 0;
+    
+    const itemsWithCalculations = (po.poItems || []).map((poItem, index) => {
+      const unitPrice = poItem.rate;
+      const amount = poItem.quantity * unitPrice;
+      const gstAmount = po.gstInclude && po.gstPercent ? (amount * po.gstPercent) / 100 : 0;
+      const totalAmount = amount + gstAmount;
+      
+      subTotal += amount;
+      totalGST += gstAmount;
+      grandTotal += totalAmount;
+      
+      return {
+        ...poItem,
+        unitPrice,
+        amount,
+        gstAmount,
+        totalAmount,
+        serialNumber: index + 1
+      };
+    });
 
     printWindow.document.write(`
       <html>
@@ -332,295 +359,211 @@ const PurchaseOrderComplete = () => {
             body { 
               font-family: Arial, sans-serif; 
               margin: 0; 
-              padding: 20px; 
-              font-size: 12px;
-              line-height: 1.4;
+              padding: 10px; 
+              font-size: 10px;
+              line-height: 1.2;
             }
-            .header { 
-              text-align: center;
-              border-bottom: 2px solid #333;
-              padding-bottom: 20px;
-              margin-bottom: 30px;
+            .document-border {
+              border: 2px solid #000;
+              padding: 10px;
+              min-height: 100vh;
             }
             .company-name { 
-              font-size: 28px; 
+              font-size: 20px; 
               font-weight: bold; 
-              color: #333; 
+              text-align: center;
+              margin-bottom: 3px;
+            }
+            .contact-row {
+              display: flex;
+              justify-content: space-between;
+              border-bottom: 1px solid #000;
+              padding-bottom: 5px;
               margin-bottom: 10px;
             }
-            .company-details { 
-              font-size: 14px; 
-              color: #666;
-            }
-            .addresses { 
-              display: flex; 
-              justify-content: space-between; 
-              margin-bottom: 30px;
-            }
-            .address-section { 
-              width: 45%; 
-            }
-            .address-section h3 { 
-              margin: 0 0 10px 0; 
-              color: #333; 
-              font-size: 14px;
-              border-bottom: 1px solid #ddd;
-              padding-bottom: 5px;
-            }
-            .address-section p { 
-              margin: 2px 0; 
-              color: #666;
-            }
-            .kind-attention {
+            .po-title {
               text-align: center;
-              margin: 20px 0;
-              padding: 15px;
-              background-color: #f8f9fa;
-              border: 1px solid #ddd;
+              font-size: 14px;
+              font-weight: bold;
+              margin: 10px 0;
             }
-            .kind-attention h3 {
-              margin: 0 0 10px 0;
-              color: #333;
-              font-size: 18px;
+            .date-po-section {
+              text-align: right;
+              margin-bottom: 10px;
             }
-            .kind-attention p {
-              margin: 5px 0;
-              color: #666;
+            .to-section {
+              margin: 10px 0;
             }
-            .po-details {
+            .to-section h4 {
+              margin: 3px 0;
+              font-size: 12px;
+            }
+            .addresses-section {
               display: flex;
               justify-content: space-between;
-              margin-bottom: 20px;
-              padding: 15px;
-              background-color: #f8f9fa;
-              border-radius: 5px;
+              margin: 10px 0;
             }
-            .po-info {
-              flex: 1;
+            .address-box {
+              width: 48%;
             }
-            .po-info h3 {
-              margin: 0 0 10px 0;
-              color: #333;
-              font-size: 16px;
+            .address-box h4 {
+              margin: 3px 0;
+              font-size: 12px;
+              text-decoration: underline;
             }
-            .po-info p {
-              margin: 5px 0;
-              color: #666;
-              font-size: 14px;
+            .subject-section {
+              margin: 10px 0;
             }
-            .supplier-info {
-              flex: 1;
-              text-align: right;
+            .subject-section h4 {
+              margin: 3px 0;
+              font-size: 12px;
             }
-            .supplier-info h3 {
-              margin: 0 0 10px 0;
-              color: #333;
-              font-size: 16px;
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 10px 0;
+              font-size: 9px;
             }
-            .supplier-info p {
-              margin: 5px 0;
-              color: #666;
-              font-size: 14px;
-            }
-            .greeting {
-              margin: 20px 0;
-              font-size: 16px;
-              color: #333;
-            }
-            .items-table { 
-              width: 100%; 
-              border-collapse: collapse; 
-              margin-bottom: 20px;
-            }
-            .items-table th, .items-table td { 
-              border: 1px solid #ddd; 
-              padding: 8px; 
+            table th, table td {
+              border: 1px solid #000;
+              padding: 4px;
               text-align: left;
             }
-            .items-table th { 
-              background-color: #f5f5f5; 
+            table th {
+              background-color: #f0f0f0;
               font-weight: bold;
+              text-align: center;
             }
-            .items-table .text-right { 
+            .text-right {
               text-align: right;
             }
-            .totals { 
-              float: right; 
-              width: 300px; 
-              margin-top: 20px;
-            }
-            .totals table { 
-              width: 100%; 
-              border-collapse: collapse;
-            }
-            .totals td { 
-              padding: 5px 10px; 
-              border: 1px solid #ddd;
-            }
-            .totals .label { 
-              background-color: #f5f5f5; 
-              font-weight: bold;
-            }
-            .totals .grand-total { 
-              background-color: #1890ff; 
-              color: white; 
-              font-weight: bold;
-              font-size: 14px;
-            }
-            .notes { 
-              margin-top: 30px; 
-              clear: both;
-            }
-            .notes h3 { 
-              margin: 0 0 10px 0; 
-              color: #333;
-            }
-            .notes p { 
-              margin: 5px 0; 
-              color: #666;
-            }
-            .footer { 
-              margin-top: 50px; 
-              text-align: center; 
-              color: #666; 
-              font-size: 14px;
-            }
-            .signature-section {
-              margin-top: 50px;
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-end;
-            }
-            .signature-box {
-              width: 200px;
-              height: 80px;
-              border: 1px solid #ddd;
-              margin-top: 20px;
-            }
-            .authorized-signature {
+            .text-center {
               text-align: center;
+            }
+            .total-section {
               margin-top: 10px;
-              font-weight: bold;
-              color: #333;
+              text-align: right;
+            }
+            .total-section table {
+              width: 250px;
+              margin-left: auto;
+            }
+            .footer-section {
+              margin-top: 20px;
+              text-align: right;
+            }
+            .signature-line {
+              margin-top: 30px;
+              border-top: 1px solid #000;
+              width: 150px;
+              display: inline-block;
+            }
+            .kind-attention {
+              margin: 5px 0;
+            }
+            .kind-attention h4 {
+              margin: 3px 0;
+              font-size: 12px;
             }
             @media print {
-              body { margin: 0; padding: 15px; }
+              body { margin: 0; padding: 8px; }
+              .document-border { padding: 8px; }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="company-name">VEKATESWARA ASSOCIATES</div>
-            <div class="company-details">
-              <p>Email: ${billingAddress?.email || 'info@vekateswara.com'} | Phone: ${billingAddress?.phone || '+91 9876543210'}</p>
+          <div class="document-border">
+            <!-- Company Header -->
+            <div class="company-name">VENKATESWARA ASSOCIATES</div>
+            <div class="contact-row">
+              <span>Email: ${address?.email || 'N/A'}</span>
+              <span>Phone: ${address?.phone || 'N/A'}</span>
             </div>
-          </div>
 
-          <div class="addresses">
-            <div class="address-section">
-              <h3>BILL TO:</h3>
-              <p><strong>VEKATESWARA ASSOCIATES</strong></p>
-              <p>${billingAddress?.addressBill || billingAddress?.addressLine1 || '123 Business Street'}</p>
-              <p>${billingAddress?.city || 'City'}, ${billingAddress?.state || 'State'} - ${billingAddress?.pincode || '123456'}</p>
-              <p>Email: ${billingAddress?.email || 'info@vekateswara.com'}</p>
-              <p>Phone: ${billingAddress?.phone || '+91 9876543210'}</p>
+            <!-- Title -->
+            <div class="po-title">PURCHASE ORDER</div>
+
+            <!-- Date and PO Number -->
+            <div class="date-po-section">
+              <strong>DATE: ${new Date(po.orderDate).toLocaleDateString('en-GB')}</strong><br>
+              <strong>PO NO: ${po.orderNumber}</strong>
             </div>
-            <div class="address-section">
-              <h3>SHIP TO:</h3>
-              <p><strong>${po.supplier?.supplierName || 'Supplier Name'}</strong></p>
-              <p>${shippingAddress?.addressShip || shippingAddress?.addressLine1 || 'Supplier Address'}</p>
-              <p>${shippingAddress?.city || 'City'}, ${shippingAddress?.state || 'State'} - ${shippingAddress?.pincode || '123456'}</p>
-              <p>Email: ${po.supplier?.email || 'supplier@email.com'}</p>
-              <p>Phone: ${po.supplier?.phone || '+91 9876543210'}</p>
-              <p>GST: ${po.supplier?.gstNumber || 'GST Number'}</p>
+
+            <!-- To Section -->
+            <div class="to-section">
+              <h4>To:</h4>
+              <div><strong>${supplier?.supplierName || 'N/A'}</strong></div>
+              <div>${supplier?.address || 'N/A'}</div>
+              
+              <div class="kind-attention">
+                <h4>KIND ATTENTION: ${supplier?.supplierName || 'N/A'}</h4>
+                <div><strong>PH No: ${supplier?.phone || 'N/A'}</strong></div>
+              </div>
             </div>
-          </div>
 
-          <div class="kind-attention">
-            <h3>KIND ATTENTION</h3>
-            <p><strong>${po.supplier?.supplierName || 'Supplier Name'}</strong></p>
-            <p>Phone: ${po.supplier?.phone || '+91 9876543210'}</p>
-          </div>
-
-          <div class="po-details">
-            <div class="po-info">
-              <h3>Purchase Order Details</h3>
-              <p><strong>PO Number:</strong> ${po.orderNumber}</p>
-              <p><strong>Date:</strong> ${po.orderDate ? dayjs(po.orderDate).format('DD/MM/YYYY') : '-'}</p>
+            <!-- Addresses Section -->
+            <div class="addresses-section">
+              <div class="address-box">
+                <h4>BILLING ADDRESS</h4>
+                <div>${address?.addressBill || 'N/A'}</div>
+                <div>GST IN: ${supplier?.gstNumber || 'N/A'}</div>
+              </div>
+              <div class="address-box">
+                <h4>SHIPPING ADDRESS [DOOR DELIVERY]</h4>
+                <div>${address?.addressShip || 'N/A'}</div>
+                <div>Contact: ${address?.phone || 'N/A'}</div>
+              </div>
             </div>
-            <div class="supplier-info">
-              <h3>Supplier Details</h3>
-              <p><strong>Name:</strong> ${po.supplier?.supplierName || '-'}</p>
-              <p><strong>Email:</strong> ${po.supplier?.email || '-'}</p>
-              <p><strong>Phone:</strong> ${po.supplier?.phone || '-'}</p>
-              <p><strong>GST:</strong> ${po.supplier?.gstNumber || '-'}</p>
+
+            <!-- Subject Section -->
+            <div class="subject-section">
+              <h4>Sub: Purchase Order of Parts</h4>
+              <h4>Dear Sir/mam</h4>
+              <div>Kindly Arrange the parts as per PO as soon as earliest.</div>
             </div>
-          </div>
 
-          <div class="greeting">
-            <p><strong>Dear Sir/Ma'am,</strong></p>
-            <p>Kindly arrange the following parts:</p>
-          </div>
-
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th style="width: 5%;">S.No</th>
-                <th style="width: 15%;">Item Code</th>
-                <th style="width: 35%;">Description</th>
-                <th style="width: 10%;">Qty</th>
-                <th style="width: 15%;">Rate</th>
-                <th style="width: 20%;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(po.poItems || []).map((item, index) => `
-                <tr>
-                  <td>${index + 1}</td>
-                  <td>${item.item?.partNumber || '-'}</td>
-                  <td>${item.item?.itemName || '-'}</td>
-                  <td class="text-right">${item.quantity}</td>
-                  <td class="text-right">₹${item.rate}</td>
-                  <td class="text-right">₹${item.total}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-
-          <div class="totals">
+            <!-- Items Table -->
             <table>
-              <tr>
-                <td class="label">Sub Total:</td>
-                <td class="text-right">₹${subTotal.toFixed(2)}</td>
-              </tr>
-              ${po.gstInclude ? `
+              <thead>
                 <tr>
-                  <td class="label">GST (${po.gstPercent || 18}%):</td>
-                  <td class="text-right">₹${taxTotal.toFixed(2)}</td>
+                  <th>SN</th>
+                  <th>PRODUCT DESCRIPTION</th>
+                  <th>QTY</th>
+                  <th>UNIT PRICE</th>
+                  <th>AMOUNT</th>
+                  ${po.gstInclude ? `<th>GST ${po.gstPercent || 0}%</th>` : ''}
+                  <th>TOTAL AMT</th>
                 </tr>
-              ` : ''}
-              <tr>
-                <td class="label grand-total">Grand Total:</td>
-                <td class="text-right grand-total">₹${grandTotal.toFixed(2)}</td>
-              </tr>
+              </thead>
+              <tbody>
+                ${itemsWithCalculations.map(item => `
+                  <tr>
+                    <td class="text-center">${item.serialNumber}</td>
+                    <td>${item.item?.itemName || 'N/A'}</td>
+                    <td class="text-center">${item.quantity}</td>
+                    <td class="text-right">₹${item.unitPrice.toFixed(2)}</td>
+                    <td class="text-right">₹${item.amount.toFixed(2)}</td>
+                    ${po.gstInclude ? `<td class="text-right">₹${item.gstAmount.toFixed(2)}</td>` : ''}
+                    <td class="text-right">₹${item.totalAmount.toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
             </table>
-          </div>
 
-          <div class="notes">
-            <h3>Notes:</h3>
-            <p>${po.notes || 'No additional notes.'}</p>
-          </div>
+            <!-- Total Section -->
+            <div class="total-section">
+              <table>
+                <tr>
+                  <td><strong>TOTAL: ₹${grandTotal.toFixed(2)}</strong></td>
+                </tr>
+              </table>
+            </div>
 
-          <div class="footer">
-            <p>Thank you for your business!</p>
-            <div class="signature-section">
-              <div>
-                <div class="signature-box"></div>
-                <div class="authorized-signature">Authorized Signature</div>
-              </div>
-              <div>
-                <p><strong>For VEKATESWARA ASSOCIATES</strong></p>
-              </div>
+            <!-- Footer -->
+            <div class="footer-section">
+              <div><strong>FOR VENKATESWARA ASSOCIATES</strong></div>
+              <div class="signature-line"></div>
+              <div><strong>AUTHORIZED SIGNATURE</strong></div>
             </div>
           </div>
         </body>
@@ -755,17 +698,29 @@ const PurchaseOrderComplete = () => {
           >
             View
           </Button>
+          <Button 
+            size="small" 
+            type="primary"
+            icon={<FilePdfOutlined />}
+            onClick={() => generatePOPDF(record)}
+            title="Export PDF"
+          >
+            PDF
+          </Button>
           
-          {record.status !== 'received' && canEdit() && (
-            <Button 
-              size="small" 
-              type="primary"
-              onClick={() => markAsReceived(record.id)}
-              title="Mark as Received"
-            >
-              Checking
-            </Button>
-          )}
+          {record.status === 'pending' ? (
+              <Button 
+                size="small" 
+                type="primary"
+                title="Mark as Received"
+                style={{ pointerEvents: 'auto' }}
+                onClick={() => markAsReceived(record)}
+              >
+                Receive
+              </Button>
+          ) : record.status === 'received' ? (
+            <Tag color="green">Received</Tag>
+          ) : null}
           {canEdit() && (
             <Button 
               size="small" 
@@ -808,12 +763,16 @@ const PurchaseOrderComplete = () => {
                 // Opening form - generate PO number
                 const poNumber = await generatePONumberForDisplay();
                 createForm.setFieldValue('orderNumber', poNumber);
+                // Ensure GST defaults to No GST on open
+                createForm.setFieldValue('gstInclude', false);
+                setGstInclude(false);
               }
               setShowCreateForm(!showCreateForm);
               setEditingId(null);
               setPoItems([]);
               if (showCreateForm) {
                 createForm.resetFields();
+                setGstInclude(false);
               }
             }}
             type="primary"
@@ -944,33 +903,11 @@ const PurchaseOrderComplete = () => {
               </Col>
               <Col xs={24} sm={8}>
                 <Form.Item
-                  name="siteIds"
-                  label="Sites"
-                  rules={[{ required: true, message: "Please select at least one site" }]}
-                >
-                  <Select 
-                    mode="multiple" 
-                    placeholder="Select sites"
-                    showSearch
-                    filterOption={(input, option) =>
-                      option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                    }
-                  >
-                    {sites.map((site) => (
-                      <Select.Option key={site.id} value={site.id}>
-                        {site.siteName}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={8}>
-                <Form.Item
                   name="gstInclude"
                   label="GST Included in Item Prices"
                   initialValue={false}
                 >
-                  <Select onChange={(value) => setGstInclude(value)}>
+                  <Select onChange={handleGstIncludeChange} value={gstInclude}>
                     <Select.Option value={false}>No GST</Select.Option>
                     <Select.Option value={true}>GST Included in Prices</Select.Option>
                   </Select>
@@ -1083,7 +1020,7 @@ const PurchaseOrderComplete = () => {
                   htmlType="submit"
                   disabled={poItems.length === 0}
                 >
-                  Create Purchase Order
+                  {editingId ? "Update Purchase Order" : "Create Purchase Order"}
                 </Button>
                 <Button onClick={() => {
                   setShowCreateForm(false);
@@ -1122,6 +1059,14 @@ const PurchaseOrderComplete = () => {
           <Button key="close" onClick={() => setShowPODetails(false)}>
             Close
           </Button>,
+          <Button 
+            key="pdf" 
+            type="primary" 
+            icon={<FilePdfOutlined />}
+            onClick={() => generatePOPDF(selectedPO)}
+          >
+            Export PDF
+          </Button>,
         ]}
       >
         {selectedPO && (
@@ -1145,19 +1090,6 @@ const PurchaseOrderComplete = () => {
             
             <div className="flex justify-between items-center mb-4">
               <Title level={4}>Items</Title>
-              {canEdit() && (
-                <Button 
-                  type="primary" 
-                  size="small"
-                  onClick={() => {
-                    setEditingItemId(selectedPO.id);
-                    setShowItemForm(true);
-                    itemForm.resetFields();
-                  }}
-                >
-                  Add Item
-                </Button>
-              )}
             </div>
             
             <Table
@@ -1328,6 +1260,7 @@ const PurchaseOrderComplete = () => {
           </Form.Item>
         </Form>
       </Modal>
+
     </div>
   );
 };

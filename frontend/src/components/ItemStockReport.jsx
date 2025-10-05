@@ -18,28 +18,42 @@ const ItemStockReport = () => {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState([]);
 
-  // Fetch items and generate report
+  // Fetch items and generate comprehensive report
   const fetchItems = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/api/items");
-      const items = res.data.data || [];
+      const [itemsRes, instancesRes] = await Promise.all([
+        api.get("/api/items"),
+        api.get("/api/itemInstances")
+      ]);
+      
+      const items = itemsRes.data.data || [];
+      const instances = instancesRes.data.data || [];
       setItems(items);
       
-      // Auto-generate report with current data
-      const reportData = items.map((item) => ({
-        id: item.id,
-        itemName: item.itemName,
-        partNumber: item.partNumber,
-        groupName: item.groupName,
-        units: item.units,
-        openingStock: item.openingStock || 0,
-        inwardStock: 0, // This would come from stock transactions
-        outwardStock: 0, // This would come from stock transactions
-        balanceStock: item.openingStock || 0,
-        unitPrice: item.purchaseRate || 0,
-        totalValue: (item.openingStock || 0) * (item.purchaseRate || 0),
-      }));
+      // Auto-generate comprehensive report with current data
+      const reportData = items.map((item) => {
+        const itemInstances = instances.filter(instance => instance.itemId === item.id);
+        const fittedInstances = itemInstances.filter(instance => instance.status === 'fitted');
+        const inStockInstances = itemInstances.filter(instance => instance.status === 'in_stock');
+        
+        return {
+          id: item.id,
+          itemName: item.itemName,
+          partNumber: item.partNumber,
+          groupName: item.groupName,
+          units: item.units,
+          stock: item.stock || 0,
+          unitPrice: item.purchaseRate || 0,
+          totalValue: (item.stock || 0) * (item.purchaseRate || 0),
+          gst: item.gst || 0,
+          canBeFitted: item.canBeFitted || false,
+          totalInstances: itemInstances.length,
+          fittedInstances: fittedInstances.length,
+          inStockInstances: inStockInstances.length,
+          instances: itemInstances,
+        };
+      });
       setReportData(reportData);
     } catch (err) {
       console.error("Error fetching items", err);
@@ -84,11 +98,13 @@ const ItemStockReport = () => {
                 <th>Part Number</th>
                 <th>Group</th>
                 <th>Units</th>
-                <th>Opening Stock</th>
-                <th>Inward</th>
-                <th>Outward</th>
-                <th>Balance</th>
+                <th>Stock Available</th>
                 <th>Unit Price</th>
+                <th>GST %</th>
+                <th>Can Be Fitted</th>
+                <th>Instances</th>
+                <th>Fitted</th>
+                <th>In Stock</th>
                 <th>Total Value</th>
               </tr>
             </thead>
@@ -99,16 +115,50 @@ const ItemStockReport = () => {
                   <td>${item.partNumber || '-'}</td>
                   <td>${item.groupName || '-'}</td>
                   <td>${item.units}</td>
-                  <td>${item.openingStock}</td>
-                  <td>${item.inwardStock}</td>
-                  <td>${item.outwardStock}</td>
-                  <td>${item.balanceStock}</td>
+                  <td style="color: ${item.stock > 0 ? 'green' : 'red'}; font-weight: bold;">${item.stock}</td>
                   <td>₹${item.unitPrice}</td>
+                  <td>${item.gst}%</td>
+                  <td>${item.canBeFitted ? 'Yes' : 'No'}</td>
+                  <td>${item.totalInstances}</td>
+                  <td style="color: ${item.fittedInstances > 0 ? 'blue' : 'gray'}; font-weight: bold;">${item.fittedInstances}</td>
+                  <td style="color: ${item.inStockInstances > 0 ? 'green' : 'gray'}; font-weight: bold;">${item.inStockInstances}</td>
                   <td>₹${item.totalValue}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
+          
+          <h3>Detailed Item Instances</h3>
+          ${reportData.filter(item => item.canBeFitted && item.instances.length > 0).map(item => `
+            <div class="item-detail">
+              <h4>${item.itemName} (${item.partNumber || 'No Part Number'})</h4>
+              <p><strong>Total Instances:</strong> ${item.totalInstances} | <strong>Fitted:</strong> ${item.fittedInstances} | <strong>In Stock:</strong> ${item.inStockInstances}</p>
+              ${item.instances.length > 0 ? `
+                <table style="width: 100%; margin-top: 10px; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background-color: #f5f5f5;">
+                      <th style="border: 1px solid #ddd; padding: 8px;">Instance Number</th>
+                      <th style="border: 1px solid #ddd; padding: 8px;">Status</th>
+                      <th style="border: 1px solid #ddd; padding: 8px;">Current RPM</th>
+                      <th style="border: 1px solid #ddd; padding: 8px;">Next Service RPM</th>
+                      <th style="border: 1px solid #ddd; padding: 8px;">Fitted To</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${item.instances.map(instance => `
+                      <tr>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${instance.instanceNumber}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px; color: ${instance.status === 'fitted' ? 'blue' : 'green'}; font-weight: bold;">${instance.status}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${instance.currentRPM || 0}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${instance.nextServiceRPM || 'Not set'}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${instance.fittedToVehicle ? instance.fittedToVehicle.vehicleNumber || 'Unknown' : '-'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              ` : ''}
+            </div>
+          `).join('')}
           
           <div class="summary">
             <div class="total">Total Stock Value: ₹${reportData.reduce((sum, item) => sum + item.totalValue, 0)}</div>
@@ -146,30 +196,75 @@ const ItemStockReport = () => {
       key: "units",
     },
     {
-      title: "Opening Stock",
-      dataIndex: "openingStock",
-      key: "openingStock",
-    },
-    {
-      title: "Inward",
-      dataIndex: "inwardStock",
-      key: "inwardStock",
-    },
-    {
-      title: "Outward",
-      dataIndex: "outwardStock",
-      key: "outwardStock",
-    },
-    {
-      title: "Balance",
-      dataIndex: "balanceStock",
-      key: "balanceStock",
+      title: "Stock Available",
+      dataIndex: "stock",
+      key: "stock",
+      render: (value) => (
+        <span style={{ 
+          color: value > 0 ? '#52c41a' : '#ff4d4f',
+          fontWeight: 'bold',
+          fontSize: '16px'
+        }}>
+          {value}
+        </span>
+      ),
     },
     {
       title: "Unit Price",
       dataIndex: "unitPrice",
       key: "unitPrice",
       render: (price) => `₹${price}`,
+    },
+    {
+      title: "GST %",
+      dataIndex: "gst",
+      key: "gst",
+      render: (gst) => `${gst}%`,
+    },
+    {
+      title: "Can Be Fitted",
+      dataIndex: "canBeFitted",
+      key: "canBeFitted",
+      render: (value) => (
+        <span style={{ 
+          color: value ? '#1890ff' : '#8c8c8c',
+          fontWeight: 'bold'
+        }}>
+          {value ? 'Yes' : 'No'}
+        </span>
+      ),
+    },
+    {
+      title: "Total Instances",
+      dataIndex: "totalInstances",
+      key: "totalInstances",
+      render: (value) => value || 0,
+    },
+    {
+      title: "Fitted",
+      dataIndex: "fittedInstances",
+      key: "fittedInstances",
+      render: (value) => (
+        <span style={{ 
+          color: value > 0 ? '#1890ff' : '#8c8c8c',
+          fontWeight: 'bold'
+        }}>
+          {value || 0}
+        </span>
+      ),
+    },
+    {
+      title: "In Stock",
+      dataIndex: "inStockInstances",
+      key: "inStockInstances",
+      render: (value) => (
+        <span style={{ 
+          color: value > 0 ? '#52c41a' : '#8c8c8c',
+          fontWeight: 'bold'
+        }}>
+          {value || 0}
+        </span>
+      ),
     },
     {
       title: "Total Value",

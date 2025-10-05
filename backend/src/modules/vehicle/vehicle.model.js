@@ -32,22 +32,13 @@ const Vehicle = sequelize.define(
         key: "id",
       },
     },
-    siteId: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      references: {
-        model: "site",
-        key: "id",
-      },
-    },
     vehicleRPM: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    vehicleServiceSchedule: {
-      type: DataTypes.JSON,
+    nextServiceRPM: {
+      type: DataTypes.INTEGER,
       allowNull: true,
-      // Example: [500, 1000, 2500]
     },
     compressorId: {
       type: DataTypes.UUID,
@@ -56,14 +47,6 @@ const Vehicle = sequelize.define(
         model: "compressor",
         key: "id",
       },
-    },
-    compressorRPM: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-    compressorServiceSchedule: {
-      type: DataTypes.JSON,
-      allowNull: true,
     },
     ...commonFields,
   },

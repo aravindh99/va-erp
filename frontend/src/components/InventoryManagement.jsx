@@ -15,10 +15,8 @@ import {
   Form,
   Select,
   InputNumber,
-  Switch,
 } from "antd";
 import {
-  FilePdfOutlined,
   ReloadOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
@@ -39,34 +37,17 @@ const InventoryManagement = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [itemsRes, stockRes, instancesRes] = await Promise.all([
+      const [itemsRes, instancesRes] = await Promise.all([
         api.get("/api/items"),
-        api.get("/api/stockTransactions"),
         api.get("/api/itemInstances")
       ]);
       
       const items = itemsRes.data.data || [];
-      const transactions = stockRes.data.data || [];
       const instances = instancesRes.data.data || [];
       
       setItems(items);
       setItemInstances(instances);
-      
-      const stockData = items.map(item => {
-        const itemTransactions = transactions.filter(t => t.itemId === item.id);
-        const inward = itemTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.quantity, 0);
-        const outward = itemTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.quantity, 0);
-        const balance = (item.openingStock || 0) + inward - outward;
-        
-        return {
-          ...item,
-          inward,
-          outward,
-          balance
-        };
-      });
-      
-      setStockData(stockData);
+      setStockData(items); // Items now have stock field directly
     } catch (err) {
       console.error("Error fetching inventory data", err);
       message.error("Error fetching inventory data");
@@ -76,16 +57,25 @@ const InventoryManagement = () => {
   };
 
   // Handle adding item instance
-  const handleAddInstance = async (values) => {
+  const handleAddStock = async (values) => {
     try {
-      await api.post("/api/itemInstances", values);
-      message.success("Item instance added successfully");
+      const { itemId, quantity, nextServiceRPM, notes } = values;
+
+      const payload = {
+        itemId,
+        quantity,
+        nextServiceRPM: nextServiceRPM ? parseInt(nextServiceRPM) : null,
+        notes
+      };
+
+      const response = await api.post("/api/stockTransactions/add-stock", payload);
+      message.success(response.data.message);
       setShowAddForm(false);
       addForm.resetFields();
       fetchData();
     } catch (err) {
-      console.error("Error adding item instance", err);
-      message.error("Error adding item instance");
+      console.error("Error adding stock", err);
+      message.error("Error adding stock");
     }
   };
 
@@ -110,46 +100,29 @@ const InventoryManagement = () => {
       ),
     },
     {
-      title: "Opening Stock",
-      dataIndex: "openingStock",
-      key: "openingStock",
-      render: (value) => (
-        <Text strong>
-          {value || 0}
-        </Text>
-      ),
-    },
-    {
-      title: "Inward",
-      dataIndex: "inward",
-      key: "inward",
-      render: (value) => (
-        <Text style={{ color: '#1890ff' }}>
-          +{value || 0}
-        </Text>
-      ),
-    },
-    {
-      title: "Outward",
-      dataIndex: "outward",
-      key: "outward",
-      render: (value) => (
-        <Text style={{ color: '#ff4d4f' }}>
-          -{value || 0}
-        </Text>
-      ),
-    },
-    {
-      title: "Balance Quantity",
-      dataIndex: "balance",
-      key: "balance",
+      title: "Stock Available",
+      dataIndex: "stock",
+      key: "stock",
       render: (value) => (
         <Text strong style={{ 
-          color: value > 0 ? '#52c41a' : '#ff4d4f' 
+          color: value > 0 ? '#52c41a' : '#ff4d4f',
+          fontSize: '16px'
         }}>
           {value || 0}
         </Text>
       ),
+    },
+    {
+      title: "Unit Price",
+      dataIndex: "purchaseRate",
+      key: "purchaseRate",
+      render: (value) => `₹${value || 0}`,
+    },
+    {
+      title: "GST %",
+      dataIndex: "gst",
+      key: "gst",
+      render: (value) => `${value || 0}%`,
     },
     {
       title: "Can Be Fitted",
@@ -167,80 +140,20 @@ const InventoryManagement = () => {
   // Calculate summary statistics
   const calculateSummary = () => {
     const totalItems = stockData.length;
-    const totalInward = stockData.reduce((sum, item) => sum + (item.inward || 0), 0);
-    const totalOutward = stockData.reduce((sum, item) => sum + (item.outward || 0), 0);
+    const totalStock = stockData.reduce((sum, item) => sum + (item.stock || 0), 0);
+    const itemsInStock = stockData.filter(item => (item.stock || 0) > 0).length;
+    const itemsOutOfStock = stockData.filter(item => (item.stock || 0) === 0).length;
 
     return {
       totalItems,
-      totalInward,
-      totalOutward,
+      totalStock,
+      itemsInStock,
+      itemsOutOfStock,
     };
   };
 
   const summary = calculateSummary();
 
-  // Export to PDF
-  const exportToPDF = () => {
-    const printWindow = window.open("", "_blank");
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Inventory Management Report - ${new Date().toLocaleDateString()}</title>
-          <style>
-            body { font-family: Arial, sans-serif; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .summary { margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 5px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Inventory Management Report</h1>
-            <p>Generated on: ${new Date().toLocaleDateString()}</p>
-          </div>
-          
-          <div class="summary">
-            <h3>Summary</h3>
-            <p><strong>Total Items:</strong> ${summary.totalItems}</p>
-            <p><strong>Total Inward:</strong> ${summary.totalInward}</p>
-            <p><strong>Total Outward:</strong> ${summary.totalOutward}</p>
-            <p><strong>Net Balance:</strong> ${summary.totalInward - summary.totalOutward}</p>
-          </div>
-          
-          <table>
-            <thead>
-              <tr>
-                <th>Item Name</th>
-                <th>Part Number</th>
-                <th>Opening Stock</th>
-                <th>Inward</th>
-                <th>Outward</th>
-                <th>Balance Quantity</th>
-                <th>Can Be Fitted</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${stockData.map(record => `
-                <tr>
-                  <td>${record.itemName}</td>
-                  <td>${record.partNumber || '-'}</td>
-                  <td>${record.openingStock || 0}</td>
-                  <td>+${record.inward || 0}</td>
-                  <td>-${record.outward || 0}</td>
-                  <td>${record.balance || 0}</td>
-                  <td>${record.canBeFitted ? 'Yes' : 'No'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  };
 
   return (
     <div className="space-y-6">
@@ -282,8 +195,17 @@ const InventoryManagement = () => {
         <Col xs={24} sm={8}>
           <Card>
             <Statistic
-              title="Total Inward"
-              value={summary.totalInward}
+              title="Total Stock"
+              value={summary.totalStock}
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card>
+            <Statistic
+              title="Items In Stock"
+              value={summary.itemsInStock}
               valueStyle={{ color: '#52c41a' }}
             />
           </Card>
@@ -291,8 +213,8 @@ const InventoryManagement = () => {
         <Col xs={24} sm={8}>
           <Card>
             <Statistic
-              title="Total Outward"
-              value={summary.totalOutward}
+              title="Items Out of Stock"
+              value={summary.itemsOutOfStock}
               valueStyle={{ color: '#ff4d4f' }}
             />
           </Card>
@@ -316,14 +238,6 @@ const InventoryManagement = () => {
               Clear Filters
             </Button>
           </div>
-          <Button
-            icon={<FilePdfOutlined />}
-            onClick={() => exportToPDF('stock')}
-            type="primary"
-            danger
-          >
-            Export PDF
-          </Button>
         </div>
         <Table
           columns={stockColumns}
@@ -340,7 +254,7 @@ const InventoryManagement = () => {
 
       {/* Add Stock Modal */}
       <Modal
-        title="Add Item Stock"
+        title="Add Stock to Inventory"
         open={showAddForm}
         onCancel={() => {
           setShowAddForm(false);
@@ -352,7 +266,7 @@ const InventoryManagement = () => {
         <Form
           form={addForm}
           layout="vertical"
-          onFinish={handleAddInstance}
+          onFinish={handleAddStock}
         >
           <Form.Item
             name="itemId"
@@ -367,66 +281,32 @@ const InventoryManagement = () => {
                 option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
               }
             >
-              {items
-                .filter(item => item.canBeFitted)
-                .map(item => (
-                  <Select.Option key={item.id} value={item.id}>
-                    {item.itemName} - {item.partNumber}
-                  </Select.Option>
-                ))}
+              {items.map(item => (
+                <Select.Option key={item.id} value={item.id}>
+                  {item.itemName} - {item.partNumber} {item.canBeFitted ? '(Can be fitted)' : ''}
+                </Select.Option>
+              ))}
             </Select>
           </Form.Item>
 
           <Form.Item
-            name="instanceNumber"
-            label="Instance Number (Optional)"
-            tooltip="Leave blank for auto-generation"
-          >
-            <Input placeholder="e.g., Hammer-001" />
-          </Form.Item>
-
-          <Form.Item
-            name="currentMeter"
-            label="Initial Meter Reading (Optional)"
-            rules={[{ type: 'number', min: 0 }]}
+            name="quantity"
+            label="Quantity"
+            rules={[{ required: true, message: "Please enter quantity" }]}
           >
             <InputNumber
               className="w-full"
-              min={0}
-              placeholder="Enter initial meter reading"
+              min={1}
+              placeholder="Enter quantity to add"
             />
           </Form.Item>
 
           <Form.Item
-            name="currentRPM"
-            label="Initial RPM Reading (Optional)"
-            rules={[{ type: 'number', min: 0 }]}
+            name="nextServiceRPM"
+            label="Next Service RPM (For fitted items only)"
+            tooltip="Enter the RPM at which the next service is due"
           >
-            <InputNumber
-              className="w-full"
-              min={0}
-              placeholder="Enter initial RPM reading"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="serviceSchedule"
-            label="Service Schedule (RPM values)"
-            tooltip="Enter RPM values when service is due, separated by commas"
-          >
-            <Select
-              mode="tags"
-              placeholder="Enter RPM values for service schedule"
-              style={{ width: '100%' }}
-              tokenSeparators={[',']}
-              onChange={(values) => {
-                const numericValues = values.map(val => {
-                  const num = parseInt(val);
-                  return isNaN(num) ? 0 : num;
-                }).filter(val => val > 0);
-                addForm.setFieldValue('serviceSchedule', numericValues);
-              }}
-            />
+            <InputNumber className="w-full" min={0} placeholder="e.g., 1000" />
           </Form.Item>
 
           <Form.Item

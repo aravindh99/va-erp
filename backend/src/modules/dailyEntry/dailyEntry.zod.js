@@ -28,14 +28,10 @@ export const createDailyEntrySchema = z.object({
   vehicleId: z.string().uuid("Invalid vehicle ID format"),
   compressorId: z.string().uuid("Invalid compressor ID format").optional(),
   // Item fitting data
-  fittedItems: z.array(z.object({
-    itemId: z.string().uuid("Invalid item ID format"),
-    startingRPM: z.number().int().nonnegative("Starting RPM must be non-negative").optional(),
-  })).optional(),
-  removedItems: z.array(z.object({
-    itemId: z.string().uuid("Invalid item ID format"),
-    closingRPM: z.number().int().nonnegative("Closing RPM must be non-negative").optional(),
-  })).optional(),
+  fittedItemInstanceIds: z.array(z.string().uuid("Invalid item instance ID format")).optional(),
+  removedItemInstanceIds: z.array(z.string().uuid("Invalid item instance ID format")).optional(),
+  additionalEmployeeIds: z.array(z.string().uuid("Invalid employee ID format")).optional(),
+  notes: z.string().optional(),
 });
 
 export const updateDailyEntrySchema = createDailyEntrySchema.partial();

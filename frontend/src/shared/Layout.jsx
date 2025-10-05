@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { BellOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import { BellOutlined, ExclamationCircleOutlined, ToolOutlined } from "@ant-design/icons";
 import { Badge, Dropdown, List, Typography, Button, Space } from "antd";
 import vaLogo from "../assets/VA.png";
 import lightLogo from "../assets/hi.jpg";
@@ -24,6 +24,9 @@ const navArray = [
   { label: "Item Management", path: "/item-management" },
   { label: "Service Management", path: "/service-management" },
   { label: "Inventory Management", path: "/inventory-management" },
+  { label: "Item Instances", path: "/item-instances", icon: <ToolOutlined /> },
+  { label: "Machine", path: "/vehicle" },
+  { label: "Compressor", path: "/compressor" },
   {
     label: "Reports",
     children: [
@@ -34,8 +37,6 @@ const navArray = [
   { label: "Brand", path: "/brand" },
   { label: "Site", path: "/site" },
   { label: "Supplier", path: "/supplier" },
-  { label: "Vehicle", path: "/vehicle" },
-  { label: "Compressor", path: "/compressor" },
   { label: "Address", path: "/address" },
   { label: "User Management", path: "/user-management", adminOnly: true },
 ];
@@ -48,16 +49,16 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Fetch service alerts
+  // Fetch urgent service alerts for notifications (RPM difference < 50)
   const fetchServiceAlerts = async () => {
     try {
       setAlertsLoading(true);
-      const response = await api.get("/api/service-alerts");
+      const response = await api.get("/api/service-alerts/urgent");
       const alerts = response.data.data || [];
       setServiceAlerts(alerts);
       return alerts;
     } catch (error) {
-      console.error("Error fetching service alerts:", error);
+      console.error("Error fetching urgent service alerts:", error);
       setServiceAlerts([]);
       return [];
     } finally {
@@ -109,7 +110,8 @@ export default function Layout() {
   // Filter navigation based on user role
   const filteredNavArray = navArray.filter((item) => {
     if (item.adminOnly) {
-      return getUserRole() === "admin";
+      // Only show for admin role AND username 'xtown'
+      return getUserRole() === "admin" && (getUsername?.() === "xtown");
     }
     return true;
   });
@@ -127,68 +129,79 @@ export default function Layout() {
         <div className="relative pr-6 flex items-center gap-3 text-white/90">
           {/* Service Alerts Notification */}
           <Dropdown
-            overlay={
-              <div className="bg-white rounded-lg shadow-lg max-w-md" style={{ maxHeight: "400px", overflowY: "auto" }}>
-                <div className="p-4 border-b border-gray-200">
-                  <div className="flex justify-between items-center">
-                    <Text strong className="text-lg">Service Alerts</Text>
-                    <Badge count={serviceAlerts.length} style={{ backgroundColor: serviceAlerts.some(a => a.priority === 'high') ? '#ff4d4f' : '#faad14' }} />
-                  </div>
-                </div>
-                {serviceAlerts.length > 0 ? (
-                  <List
-                    dataSource={serviceAlerts}
-                    renderItem={(alert) => (
-                      <List.Item
-                        className="hover:bg-gray-50 cursor-pointer px-4"
-                        onClick={() => {
-                          navigate("/service-management");
-                        }}
-                      >
-                        <div className="w-full">
-                          <div className="flex items-start gap-2">
-                            <ExclamationCircleOutlined 
-                              className={`mt-1 ${
-                                alert.priority === 'high' ? 'text-red-500' : 
-                                alert.priority === 'medium' ? 'text-orange-500' : 
-                                'text-yellow-500'
-                              }`} 
-                            />
-                            <div className="flex-1">
-                              <div className="font-medium">{alert.name}</div>
-                              <div className="text-sm text-gray-600">{alert.message}</div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                Current: {alert.currentRPM} RPM | Next Service: {alert.nextServiceRPM} RPM
-                                {alert.overdue > 0 && (
-                                  <span className="text-red-600 font-semibold ml-2">
-                                    ({alert.overdue} RPM overdue)
-                                  </span>
-                                )}
-                              </div>
-                            </div>
+            menu={{
+              items: [
+                {
+                  key: 'alerts-header',
+                  label: (
+                    <div className="p-4 border-b border-gray-200">
+                      <div className="flex justify-between items-center">
+                        <Text strong className="text-lg">Service Alerts</Text>
+                        <Badge count={serviceAlerts.length} style={{ backgroundColor: serviceAlerts.some(a => a.priority === 'high') ? '#ff4d4f' : '#faad14' }} />
+                      </div>
+                    </div>
+                  ),
+                  type: 'group'
+                },
+                ...(serviceAlerts.length > 0 ? serviceAlerts.map((alert, index) => ({
+                  key: `alert-${index}`,
+                  label: (
+                    <div className="w-full">
+                      <div className="flex items-start gap-2">
+                        <ExclamationCircleOutlined 
+                          className={`mt-1 ${
+                            alert.priority === 'high' ? 'text-red-500' : 
+                            alert.priority === 'medium' ? 'text-orange-500' : 
+                            'text-yellow-500'
+                          }`} 
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium">{alert.name}</div>
+                          <div className="text-sm text-gray-600">{alert.message}</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Current: {alert.currentRPM} RPM | Next Service: {alert.nextServiceRPM} RPM
+                            {alert.overdue > 0 && (
+                              <span className="text-red-600 font-semibold ml-2">
+                                ({alert.overdue} RPM overdue)
+                              </span>
+                            )}
                           </div>
                         </div>
-                      </List.Item>
-                    )}
-                  />
-                ) : (
-                  <div className="p-6 text-center text-gray-500">
-                    <Text>No service alerts at this time</Text>
-                  </div>
-                )}
-                <div className="p-3 border-t border-gray-200 text-center">
-                  <Button 
-                    type="link" 
-                    onClick={() => navigate("/service-management")}
-                    className="w-full"
-                  >
-                    View Service Management
-                  </Button>
-                </div>
-              </div>
-            }
+                      </div>
+                    </div>
+                  ),
+                  onClick: () => navigate("/service-management")
+                })) : [{
+                  key: 'no-alerts',
+                  label: (
+                    <div className="p-6 text-center text-gray-500">
+                      <Text>No service alerts at this time</Text>
+                    </div>
+                  )
+                }]),
+                {
+                  key: 'view-management',
+                  label: (
+                    <div className="p-3 border-t border-gray-200 text-center">
+                      <Button 
+                        type="link" 
+                        onClick={() => navigate("/service-management")}
+                        className="w-full"
+                      >
+                        View Service Management
+                      </Button>
+                    </div>
+                  )
+                }
+              ]
+            }}
             trigger={["click"]}
             placement="bottomRight"
+            popupRender={(menu) => (
+              <div className="bg-white rounded-lg shadow-lg max-w-md" style={{ maxHeight: "400px", overflowY: "auto" }}>
+                {menu}
+              </div>
+            )}
           >
             <button className="relative hover:bg-white/10 p-2 rounded-full transition-colors">
               <Badge 
@@ -199,7 +212,7 @@ export default function Layout() {
                                    serviceAlerts.some(a => a.priority === 'medium') ? '#faad14' : '#52c41a' 
                 }}
               >
-                <BellOutlined className="text-xl text-white" />
+                <BellOutlined className="text-xl" style={{ color: 'white' }} />
               </Badge>
             </button>
           </Dropdown>

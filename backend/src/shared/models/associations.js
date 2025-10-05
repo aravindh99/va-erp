@@ -14,8 +14,6 @@ import DailyEntryEmployee from "../../modules/dailyEntry/dailyEntryEmployee.mode
 import Compressor from "../../modules/compressor/compressor.model.js";
 import Address from "../../modules/address/address.model.js";
 import User from "../../modules/user/user.model.js";
-import ItemFitting from "../../modules/itemFitting/itemFitting.model.js";
-import ItemService from "../../modules/itemService/itemService.model.js";
 import ItemInstance from "../../modules/itemInstance/itemInstance.model.js";
 
 export const defineAssociations = () => {
@@ -121,28 +119,6 @@ export const defineAssociations = () => {
     as: "vehicle",
   });
 
-  // ========== ITEM FITTING RELATIONSHIPS ==========
-  Item.hasMany(ItemFitting, { foreignKey: "itemId", as: "fittings" });
-  ItemFitting.belongsTo(Item, { foreignKey: "itemId", as: "item" });
-
-  Vehicle.hasMany(ItemFitting, { foreignKey: "vehicleId", as: "fittedItems" });
-  ItemFitting.belongsTo(Vehicle, { foreignKey: "vehicleId", as: "vehicle" });
-
-  DailyEntry.hasMany(ItemFitting, { foreignKey: "dailyEntryId", as: "fittedItems" });
-  ItemFitting.belongsTo(DailyEntry, { foreignKey: "dailyEntryId", as: "fittingDailyEntry" });
-
-  DailyEntry.hasMany(ItemFitting, { foreignKey: "removedDailyEntryId", as: "removedItems" });
-  ItemFitting.belongsTo(DailyEntry, { foreignKey: "removedDailyEntryId", as: "removalDailyEntry" });
-
-  // ========== ITEM SERVICE RELATIONSHIPS ==========
-  Item.hasMany(ItemService, { foreignKey: "itemId", as: "services" });
-  ItemService.belongsTo(Item, { foreignKey: "itemId", as: "item" });
-
-  Vehicle.hasMany(ItemService, { foreignKey: "vehicleId", as: "itemServices" });
-  ItemService.belongsTo(Vehicle, { foreignKey: "vehicleId", as: "vehicle" });
-
-  DailyEntry.hasMany(ItemService, { foreignKey: "dailyEntryId", as: "itemServices" });
-  ItemService.belongsTo(DailyEntry, { foreignKey: "dailyEntryId", as: "dailyEntry" });
 
   // ========== ITEM INSTANCE RELATIONSHIPS ==========
   Item.hasMany(ItemInstance, { foreignKey: "itemId", as: "instances" });
@@ -150,6 +126,10 @@ export const defineAssociations = () => {
 
   Vehicle.hasMany(ItemInstance, { foreignKey: "fittedToVehicleId", as: "fittedInstances" });
   ItemInstance.belongsTo(Vehicle, { foreignKey: "fittedToVehicleId", as: "fittedToVehicle" });
+
+  // Service relationships with ItemInstance
+  ItemInstance.hasMany(Service, { foreignKey: "itemInstanceId", as: "services" });
+  Service.belongsTo(ItemInstance, { foreignKey: "itemInstanceId", as: "itemInstance" });
 
   // ========== USER RELATIONSHIPS ==========
   // User model relationships (if needed for createdBy/updatedBy tracking)

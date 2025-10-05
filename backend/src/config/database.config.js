@@ -11,7 +11,7 @@ const dbConfig = {
     database: process.env.DB_NAME,
     host: process.env.DB_HOST || "localhost",
     dialect: "mysql",
-    logging: console.log,
+    logging: false,
     pool: {
       max: 10,
       min: 0,
@@ -68,12 +68,10 @@ export const connectDB = async () => {
   while (retries > 0) {
     try {
       await sequelize.authenticate();
-      console.log("✅ Database connected successfully");
       
       // Sync database in development (be careful in production!)
       if (environment === "development") {
         await sequelize.sync({ alter: false });
-        console.log("✅ Database synchronized");
       }
       
       return true;
@@ -94,9 +92,7 @@ export const connectDB = async () => {
 
 // Graceful shutdown
 process.on("SIGINT", async () => {
-  console.log("\n🔄 Closing database connection...");
   await sequelize.close();
-  console.log("✅ Database connection closed");
   process.exit(0);
 });
 

@@ -36,17 +36,9 @@ const CompressorServiceHistory = () => {
   const fetchCompressorServiceHistory = async () => {
     setLoading(true);
     try {
-      // Fetch compressor details from vehicles (where compressor RPM is stored)
-      const vehiclesRes = await api.get("/api/vehicles");
-      const vehicleWithCompressor = vehiclesRes.data.data?.find(v => v.compressorId === compressorId);
-      
-      if (vehicleWithCompressor) {
-        setCompressor({
-          ...vehicleWithCompressor.compressor,
-          compressorRPM: vehicleWithCompressor.compressorRPM,
-          compressorServiceSchedule: vehicleWithCompressor.compressorServiceSchedule
-        });
-      }
+      // Fetch compressor details directly
+      const compressorRes = await api.get(`/api/compressors/${compressorId}`);
+      setCompressor(compressorRes.data.data);
 
       // Fetch service history
       const servicesRes = await api.get(`/api/services?compressorId=${compressorId}&serviceType=compressor`);
@@ -136,9 +128,9 @@ const CompressorServiceHistory = () => {
 
   const totalServices = services.length;
   const lastService = services[0]; // Assuming sorted by date desc
-  const nextServiceRPM = compressor?.compressorServiceSchedule?.[0] || 0;
+  const nextServiceRPM = compressor?.nextServiceRPM || 0;
   const currentRPM = compressor?.compressorRPM || 0;
-  const remainingRPM = nextServiceRPM - currentRPM;
+  const remainingRPM = nextServiceRPM ? Math.max(0, nextServiceRPM - currentRPM) : 0;
 
   return (
     <div className="bg-white rounded-lg shadow p-6">

@@ -14,8 +14,12 @@ const Service = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false, // at what RPM the service was done
     },
+    nextServiceRPM: {
+      type: DataTypes.INTEGER,
+      allowNull: true, // what the next service RPM was set to after this service
+    },
     serviceType: {
-      type: DataTypes.ENUM("vehicle", "compressor"),
+      type: DataTypes.ENUM("vehicle", "compressor", "item"),
       allowNull: false,
     },
     serviceDate: {
@@ -25,7 +29,7 @@ const Service = sequelize.define(
     // 🔗 foreign keys
     vehicleId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: "vehicle",
         key: "id",
@@ -39,10 +43,18 @@ const Service = sequelize.define(
         key: "id",
       },
     },
+    itemInstanceId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "itemInstance",
+        key: "id",
+      },
+    },
     ...commonFields,
   },
   {
-    tableName: "service",
+    tableName: "services",
     timestamps: true,
     paranoid: true,
   }

@@ -32,7 +32,6 @@ const Vehicle = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [brands, setBrands] = useState([]);
-  const [sites, setSites] = useState([]);
   const [compressors, setCompressors] = useState([]);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -47,7 +46,6 @@ const Vehicle = () => {
     setLoading(true);
     try {
       const res = await api.get(`/api/vehicles?page=${page}&limit=${limit}`);
-      console.log("Vehicles API response:", res.data.data); // Debug log
       setVehicles(res.data.data || []);
       
       // Update pagination state
@@ -73,27 +71,16 @@ const Vehicle = () => {
   const fetchBrands = async () => {
     try {
       const res = await api.get("/api/brands");
-      console.log("Brands API response:", res.data.data); // Debug log
       setBrands(res.data.data || []);
     } catch (err) {
       console.error("Error fetching brands", err);
     }
   };
 
-  const fetchSites = async () => {
-    try {
-      const res = await api.get("/api/sites");
-      console.log("Sites API response:", res.data.data); // Debug log
-      setSites(res.data.data || []);
-    } catch (err) {
-      console.error("Error fetching sites", err);
-    }
-  };
 
   const fetchCompressors = async () => {
     try {
       const res = await api.get("/api/compressors");
-      console.log("Compressors API response:", res.data.data); // Debug log
       setCompressors(res.data.data || []);
     } catch (err) {
       console.error("Error fetching compressors", err);
@@ -103,31 +90,18 @@ const Vehicle = () => {
   useEffect(() => {
     fetchVehicles();
     fetchBrands();
-    fetchSites();
     fetchCompressors();
   }, []);
 
   // Handle form submit (create or update)
   const handleSubmit = async (values) => {
     try {
-      // Normalize schedule inputs (accept string like "500,1000,2000" or array)
-      const normalizeSchedule = (val) => {
-        if (Array.isArray(val)) return val.map((n) => Number(n)).filter((n) => !isNaN(n));
-        if (typeof val === "string") {
-          return val
-            .split(',')
-            .map((s) => Number(s.trim()))
-            .filter((n) => !isNaN(n));
-        }
-        return [];
-      };
 
       // Build payload with only defined values
       const payload = {
         vehicleType: values.vehicleType,
         vehicleNumber: values.vehicleNumber?.toUpperCase(),
         brandId: values.brandId,
-        siteId: values.siteId,
       };
 
       // Add optional fields only if they have values
@@ -139,26 +113,15 @@ const Vehicle = () => {
         payload.vehicleRPM = Number(values.vehicleRPM);
       }
       
-      const vehicleSchedule = normalizeSchedule(values.vehicleServiceSchedule);
-      if (vehicleSchedule.length > 0) {
-        payload.vehicleServiceSchedule = vehicleSchedule;
+      if (values.nextServiceRPM !== undefined && values.nextServiceRPM !== null && values.nextServiceRPM !== '') {
+        payload.nextServiceRPM = Number(values.nextServiceRPM);
       }
       
       if (values.compressorId) {
         payload.compressorId = values.compressorId;
       }
       
-      if (values.compressorRPM !== undefined && values.compressorRPM !== null && values.compressorRPM !== '') {
-        payload.compressorRPM = Number(values.compressorRPM);
-      }
-      
-      const compressorSchedule = normalizeSchedule(values.compressorServiceSchedule);
-      if (compressorSchedule.length > 0) {
-        payload.compressorServiceSchedule = compressorSchedule;
-      }
 
-      // Debug: Log the payload being sent
-      console.log("Payload being sent to backend:", payload);
 
       if (editingId) {
         await api.put(`/api/vehicles/${editingId}`, payload);
@@ -189,16 +152,9 @@ const Vehicle = () => {
       vehicleNumber: record.vehicleNumber || undefined,
       status: record.status || undefined,
       brandId: record.brandId || record.brand?.id || undefined,
-      siteId: record.siteId || record.site?.id || undefined,
       vehicleRPM: record.vehicleRPM ?? undefined,
-      vehicleServiceSchedule: Array.isArray(record.vehicleServiceSchedule)
-        ? record.vehicleServiceSchedule.join(',')
-        : (record.vehicleServiceSchedule || ''),
+      nextServiceRPM: record.nextServiceRPM ?? undefined,
       compressorId: record.compressorId || record.compressor?.id || undefined,
-      compressorRPM: record.compressorRPM ?? undefined,
-      compressorServiceSchedule: Array.isArray(record.compressorServiceSchedule)
-        ? record.compressorServiceSchedule.join(',')
-        : (record.compressorServiceSchedule || ''),
     });
   };
 
@@ -221,7 +177,7 @@ const Vehicle = () => {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Vehicle List</title>
+          <title>Machine List</title>
           <style>
             body { font-family: Arial, sans-serif; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -238,11 +194,11 @@ const Vehicle = () => {
           <table>
             <thead>
               <tr>
-                <th>Vehicle Type</th>
-                <th>Vehicle Number</th>
+                <th>Machine Type</th>
+                <th>Machine Number</th>
                 <th>Brand</th>
-                <th>Site</th>
-                <th>Vehicle RPM</th>
+                <th>Machine RPM</th>
+                <th>Next Service RPM</th>
                 <th>Compressor</th>
                 <th>Status</th>
               </tr>
@@ -258,9 +214,6 @@ const Vehicle = () => {
                     const brandName = vehicle.brand?.brandName || 
                       brands.find(b => b.id === vehicle.brandId)?.brandName || "-";
                     
-                    // Get site name
-                    const siteName = vehicle.site?.siteName || 
-                      sites.find(s => s.id === vehicle.siteId)?.siteName || "-";
                     
                     // Get compressor name
                     const compressorName = vehicle.compressor?.compressorName || 
@@ -271,8 +224,8 @@ const Vehicle = () => {
                       <td>${vehicle.vehicleType}</td>
                       <td>${vehicle.vehicleNumber}</td>
                       <td>${brandName}</td>
-                      <td>${siteName}</td>
-                      <td>${vehicle.vehicleRPM}</td>
+                      <td>${vehicle.vehicleRPM || '-'}</td>
+                      <td>${vehicle.nextServiceRPM || '-'}</td>
                       <td>${compressorName}</td>
                       <td>${vehicle.status}</td>
                     </tr>`;
@@ -290,8 +243,8 @@ const Vehicle = () => {
 
   // Table columns
   const columns = [
-    { title: "Vehicle Type", dataIndex: "vehicleType", key: "vehicleType" },
-    { title: "Vehicle Number", dataIndex: "vehicleNumber", key: "vehicleNumber" },
+    { title: "Machine Type", dataIndex: "vehicleType", key: "vehicleType" },
+    { title: "Machine Number", dataIndex: "vehicleNumber", key: "vehicleNumber" },
     { 
       title: "Brand", 
       key: "brandName",
@@ -308,23 +261,8 @@ const Vehicle = () => {
         return brand ? brand.brandName : "-";
       }
     },
-    { 
-      title: "Site", 
-      key: "siteName",
-      render: (_, record) => {
-        // Try different ways to get site name
-        if (record.site?.siteName) {
-          return record.site.siteName;
-        }
-        if (record.siteName) {
-          return record.siteName;
-        }
-        // Find site by ID if we have the ID
-        const site = sites.find(s => s.id === record.siteId);
-        return site ? site.siteName : "-";
-      }
-    },
-    { title: "Vehicle RPM", dataIndex: "vehicleRPM", key: "vehicleRPM" },
+    { title: "Machine RPM", dataIndex: "vehicleRPM", key: "vehicleRPM" },
+    { title: "Next Service RPM", dataIndex: "nextServiceRPM", key: "nextServiceRPM", render: (value) => value || "-" },
     { 
       title: "Compressor", 
       key: "compressorName",
@@ -392,7 +330,7 @@ const Vehicle = () => {
     <div className="bg-white rounded-lg shadow p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Vehicle Management</h1>
+        <h1 className="text-2xl font-bold">Machine Management</h1>
         <Space>
           <Button
             icon={<FilePdfOutlined />}
@@ -412,7 +350,7 @@ const Vehicle = () => {
               }}
               type="primary"
             >
-              {showForm ? "Cancel" : "Add Vehicle"}
+              {showForm ? "Cancel" : "Add Machine"}
             </Button>
           )}
         </Space>
@@ -425,7 +363,7 @@ const Vehicle = () => {
             <div className="grid grid-cols-2 gap-4">
               <Form.Item
                 name="vehicleType"
-                label="Vehicle Type"
+                label="Machine Type"
                 rules={[{ required: true }]}
               >
                 <Select placeholder="Select vehicle type">
@@ -436,7 +374,7 @@ const Vehicle = () => {
               </Form.Item>
               <Form.Item
                 name="vehicleNumber"
-                label="Vehicle Number"
+                label="Machine Number"
                 rules={[{ required: true }]}
               >
                 <Input 
@@ -461,30 +399,17 @@ const Vehicle = () => {
                 </Select>
               </Form.Item>
               <Form.Item
-                name="siteId"
-                label="Site"
-                rules={[{ required: true }]}
-              >
-                <Select placeholder="Select site">
-                  {sites.map((site) => (
-                    <Select.Option key={site.id} value={site.id}>
-                      {site.siteName}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-              <Form.Item
                 name="vehicleRPM"
-                label="Vehicle RPM"
+                label="Machine RPM"
               >
                 <InputNumber className="w-full" min={0} />
               </Form.Item>
               <Form.Item
-                name="vehicleServiceSchedule"
-                label="Vehicle Service Schedule (RPM)"
-                tooltip="Enter comma-separated RPM values (e.g., 500,1000,2000)"
+                name="nextServiceRPM"
+                label="Next Service RPM"
+                tooltip="Enter the RPM at which the next service is due"
               >
-                <Input placeholder="e.g., 500,1000,2000" />
+                <InputNumber className="w-full" min={0} placeholder="e.g., 1000" />
               </Form.Item>
               <Form.Item
                 name="compressorId"
@@ -497,19 +422,6 @@ const Vehicle = () => {
                     </Select.Option>
                   ))}
                 </Select>
-              </Form.Item>
-              <Form.Item
-                name="compressorRPM"
-                label="Compressor RPM"
-              >
-                <InputNumber className="w-full" min={0} />
-              </Form.Item>
-              <Form.Item
-                name="compressorServiceSchedule"
-                label="Compressor Service Schedule (RPM)"
-                tooltip="Enter comma-separated RPM values (e.g., 500,1000,2000)"
-              >
-                <Input placeholder="e.g., 500,1000,2000" />
               </Form.Item>
               <Form.Item
                 name="status"
@@ -525,7 +437,7 @@ const Vehicle = () => {
             </div>
             <Form.Item>
               <Button type="primary" htmlType="submit">
-                {editingId ? "Update Vehicle" : "Add Vehicle"}
+                {editingId ? "Update Machine" : "Add Machine"}
               </Button>
             </Form.Item>
           </Form>

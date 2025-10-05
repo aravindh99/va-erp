@@ -1,12 +1,10 @@
 import DailyEntry from "./dailyEntry.model.js";
 import Vehicle from "../vehicle/vehicle.model.js";
+import Compressor from "../compressor/compressor.model.js";
 import Service from "../service/service.model.js";
 import EmployeeList from "../employee/employeeList.model.js";
 import Item from "../item/item.model.js";
-import ItemFitting from "../itemFitting/itemFitting.model.js";
 import ItemInstance from "../itemInstance/itemInstance.model.js";
-import StockTransaction from "../stockTransaction/stockTransaction.model.js";
-import ItemService from "../itemService/itemService.model.js";
 import { BaseCrud } from "../../shared/utils/baseCrud.js";
 import { BaseController } from "../../shared/utils/baseController.js";
 import DailyEntryEmployee from "./dailyEntryEmployee.model.js";
@@ -20,18 +18,17 @@ class DailyEntryCustomController extends BaseController {
   constructor() {
     super(DailyEntryCrud, "DailyEntry");
   }
-  // Auto-generate reference number with VA- prefix
+  // Auto-generate reference number with VA- prefix (simple sequential)
   generateRefNo = async () => {
-    const currentYear = new Date().getFullYear().toString().slice(-2);
     const count = await DailyEntry.count({
       where: {
         refNo: {
-          [Op.like]: `VA-%-${currentYear}`
+          [Op.like]: 'VA-%'
         },
         deletedAt: null
       }
     });
-    return `VA-${String(count + 1).padStart(3, '0')}-${currentYear}`;
+    return `VA-${String(count + 1).padStart(3, '0')}`;
   };
 
   // Endpoint: generate and return next ref no
@@ -254,8 +251,8 @@ class DailyEntryCustomController extends BaseController {
       compressorServiceDone, 
       employeeId, 
       employeeIds = [],
-      fittedItems = [],
-      removedItems = [],
+      fittedItemInstanceIds = [],
+      removedItemInstanceIds = [],
       notes,
       compressorHSD
     } = req.body;
@@ -281,51 +278,25 @@ class DailyEntryCustomController extends BaseController {
       await DailyEntryEmployee.bulkCreate(rows, { transaction });
     }
 
-    // Handle item fitting
-    if (fittedItems.length > 0) {
-      for (const item of fittedItems) {
-        if (!item.itemInstanceId) continue;
-        const itemInstance = await ItemInstance.findByPk(item.itemInstanceId, { transaction });
+    // Handle item fitting - just update status, no stock changes
+    if (fittedItemInstanceIds.length > 0) {
+      for (const instanceId of fittedItemInstanceIds) {
+        const itemInstance = await ItemInstance.findByPk(instanceId, { transaction });
         if (itemInstance && itemInstance.status === 'in_stock') {
           await itemInstance.update({
             status: 'fitted',
             fittedToVehicleId: vehicleId,
             fittedDate: entry.date,
-            currentMeter: (itemInstance.currentMeter || 0) + (item.meterIncrement || 0),
-            currentRPM: (itemInstance.currentRPM || 0) + (item.rpmIncrement || 0),
             updatedBy: req.user?.username || "system"
           }, { transaction });
-
-          await StockTransaction.create({
-            itemId: itemInstance.itemId,
-            type: 'OUT',
-            quantity: 1,
-            rate: 0,
-            reference: 'DAILY_ENTRY_FITTING',
-            referenceId: entry.id,
-            createdBy: req.user?.username || "system"
-          }, { transaction });
-
-          if (item.serviceDone) {
-            await ItemService.create({
-              itemId: item.itemId,
-              vehicleId,
-              serviceRPM: item.startingRPM || 0,
-              serviceDate: entry.date,
-              dailyEntryId: entry.id,
-              notes: `Service completed for ${item.itemName || 'item'} fitted to vehicle`,
-              createdBy: req.user.username
-            }, { transaction });
-          }
         }
       }
     }
 
-    // Handle item removal
-    if (removedItems.length > 0) {
-      for (const item of removedItems) {
-        if (!item.itemInstanceId) continue;
-        const itemInstance = await ItemInstance.findByPk(item.itemInstanceId, { transaction });
+    // Handle item removal - just update status, no stock changes
+    if (removedItemInstanceIds.length > 0) {
+      for (const instanceId of removedItemInstanceIds) {
+        const itemInstance = await ItemInstance.findByPk(instanceId, { transaction });
         if (itemInstance && itemInstance.status === 'fitted' && itemInstance.fittedToVehicleId === vehicleId) {
           await itemInstance.update({
             status: 'in_stock',
@@ -334,28 +305,6 @@ class DailyEntryCustomController extends BaseController {
             removedDate: entry.date,
             updatedBy: req.user?.username || "system"
           }, { transaction });
-
-          await StockTransaction.create({
-            itemId: itemInstance.itemId,
-            type: 'IN',
-            quantity: 1,
-            rate: 0,
-            reference: 'DAILY_ENTRY_REMOVAL',
-            referenceId: entry.id,
-            createdBy: req.user?.username || "system"
-          }, { transaction });
-
-          if (item.serviceDone) {
-            await ItemService.create({
-              itemId: item.itemId,
-              vehicleId,
-              serviceRPM: item.closingRPM || 0,
-              serviceDate: entry.date,
-              dailyEntryId: entry.id,
-              notes: `Service completed for ${item.itemName || 'item'} removed from vehicle`,
-              createdBy: req.user.username
-            }, { transaction });
-          }
         }
       }
     }
@@ -364,16 +313,46 @@ class DailyEntryCustomController extends BaseController {
     const vehicle = await Vehicle.findByPk(vehicleId, { transaction });
     if (vehicle) {
       const vehicleRPMDiff = (vehicleClosingRPM || 0) - (vehicleOpeningRPM || 0);
-      const compressorRPMDiff = (compressorClosingRPM || 0) - (compressorOpeningRPM || 0);
       await vehicle.update({
-        vehicleRPM: (vehicle.vehicleRPM || 0) + Math.max(0, vehicleRPMDiff),
-        compressorRPM: (vehicle.compressorRPM || 0) + Math.max(0, compressorRPMDiff)
+        vehicleRPM: (vehicle.vehicleRPM || 0) + Math.max(0, vehicleRPMDiff)
       }, { transaction });
 
       const serviceCreates = [];
       if (vehicleServiceDone) serviceCreates.push(Service.create({ serviceRPM: vehicle.vehicleRPM, serviceType: "vehicle", vehicleId, compressorId: vehicle.compressorId, createdBy: req.user.username }, { transaction }));
-      if (compressorServiceDone && compressorId) serviceCreates.push(Service.create({ serviceRPM: vehicle.compressorRPM, serviceType: "compressor", vehicleId, compressorId, createdBy: req.user.username }, { transaction }));
       if (serviceCreates.length) await Promise.all(serviceCreates);
+    }
+
+    // Update compressor RPM totals
+    if (compressorId) {
+      const compressor = await Compressor.findByPk(compressorId, { transaction });
+      if (compressor) {
+        const compressorRPMDiff = (compressorClosingRPM || 0) - (compressorOpeningRPM || 0);
+        await compressor.update({
+          compressorRPM: (compressor.compressorRPM || 0) + Math.max(0, compressorRPMDiff)
+        }, { transaction });
+
+        if (compressorServiceDone) {
+          await Service.create({
+            serviceRPM: compressor.compressorRPM,
+            serviceType: "compressor",
+            vehicleId,
+            compressorId,
+            createdBy: req.user.username
+          }, { transaction });
+        }
+      }
+    }
+
+    // Update RPM for fitted item instances
+    const vehicleRPMDiff = (vehicleClosingRPM || 0) - (vehicleOpeningRPM || 0);
+    if (vehicleRPMDiff > 0 && fittedItemInstanceIds.length > 0) {
+      for (const instanceId of fittedItemInstanceIds) {
+        await ItemInstance.increment('currentRPM', {
+          by: vehicleRPMDiff,
+          where: { id: instanceId },
+          transaction
+        });
+      }
     }
 
     await transaction.commit();
@@ -399,8 +378,8 @@ update = async (req, res, next) => {
       compressorServiceDone, 
       employeeId, 
       additionalEmployeeIds = [],
-      fittedItems = [],
-      removedItems = [],
+      fittedItemInstanceIds = [],
+      removedItemInstanceIds = [],
       notes,
       compressorHSD
     } = req.body;
@@ -438,86 +417,33 @@ update = async (req, res, next) => {
       }
     }
 
-    // Handle item fitting (if provided)
-    if (req.body.hasOwnProperty('fittedItems')) {
-      // Handle item fitting
-      if (fittedItems.length > 0) {
-        for (const item of fittedItems) {
-          if (!item.itemInstanceId) continue;
-          const itemInstance = await ItemInstance.findByPk(item.itemInstanceId, { transaction });
-          if (itemInstance && itemInstance.status === 'in_stock') {
-            await itemInstance.update({
-              status: 'fitted',
-              fittedToVehicleId: vehicleId,
-              fittedDate: existingEntry.date,
-              currentMeter: (itemInstance.currentMeter || 0) + (item.meterIncrement || 0),
-              currentRPM: (itemInstance.currentRPM || 0) + (item.rpmIncrement || 0),
-              updatedBy: req.user?.username || "system"
-            }, { transaction });
-
-            await StockTransaction.create({
-              itemId: itemInstance.itemId,
-              type: 'OUT',
-              quantity: 1,
-              rate: 0,
-              reference: 'DAILY_ENTRY_FITTING',
-              referenceId: id,
-              createdBy: req.user?.username || "system"
-            }, { transaction });
-
-            if (item.serviceDone) {
-              await ItemService.create({
-                itemId: item.itemId,
-                vehicleId,
-                serviceRPM: item.startingRPM || 0,
-                serviceDate: existingEntry.date,
-                dailyEntryId: id,
-                notes: `Service completed for ${item.itemName || 'item'} fitted to vehicle`,
-                createdBy: req.user.username
-              }, { transaction });
-            }
-          }
+    // Handle item fitting - just update status, no stock changes
+    if (fittedItemInstanceIds && fittedItemInstanceIds.length > 0) {
+      for (const instanceId of fittedItemInstanceIds) {
+        const itemInstance = await ItemInstance.findByPk(instanceId, { transaction });
+        if (itemInstance && itemInstance.status === 'in_stock') {
+          await itemInstance.update({
+            status: 'fitted',
+            fittedToVehicleId: vehicleId,
+            fittedDate: existingEntry.date,
+            updatedBy: req.user?.username || "system"
+          }, { transaction });
         }
       }
     }
 
-    // Handle item removal (if provided)
-    if (req.body.hasOwnProperty('removedItems')) {
-      if (removedItems.length > 0) {
-        for (const item of removedItems) {
-          if (!item.itemInstanceId) continue;
-          const itemInstance = await ItemInstance.findByPk(item.itemInstanceId, { transaction });
-          if (itemInstance && itemInstance.status === 'fitted' && itemInstance.fittedToVehicleId === vehicleId) {
-            await itemInstance.update({
-              status: 'in_stock',
-              fittedToVehicleId: null,
-              fittedDate: null,
-              removedDate: existingEntry.date,
-              updatedBy: req.user?.username || "system"
-            }, { transaction });
-
-            await StockTransaction.create({
-              itemId: itemInstance.itemId,
-              type: 'IN',
-              quantity: 1,
-              rate: 0,
-              reference: 'DAILY_ENTRY_REMOVAL',
-              referenceId: id,
-              createdBy: req.user?.username || "system"
-            }, { transaction });
-
-            if (item.serviceDone) {
-              await ItemService.create({
-                itemId: item.itemId,
-                vehicleId,
-                serviceRPM: item.closingRPM || 0,
-                serviceDate: existingEntry.date,
-                dailyEntryId: id,
-                notes: `Service completed for ${item.itemName || 'item'} removed from vehicle`,
-                createdBy: req.user.username
-              }, { transaction });
-            }
-          }
+    // Handle item removal - just update status, no stock changes
+    if (removedItemInstanceIds && removedItemInstanceIds.length > 0) {
+      for (const instanceId of removedItemInstanceIds) {
+        const itemInstance = await ItemInstance.findByPk(instanceId, { transaction });
+        if (itemInstance && itemInstance.status === 'fitted' && itemInstance.fittedToVehicleId === vehicleId) {
+          await itemInstance.update({
+            status: 'in_stock',
+            fittedToVehicleId: null,
+            fittedDate: null,
+            removedDate: existingEntry.date,
+            updatedBy: req.user?.username || "system"
+          }, { transaction });
         }
       }
     }
@@ -527,16 +453,34 @@ update = async (req, res, next) => {
       const vehicle = await Vehicle.findByPk(vehicleId, { transaction });
       if (vehicle) {
         const vehicleRPMDiff = (vehicleClosingRPM || 0) - (vehicleOpeningRPM || 0);
-        const compressorRPMDiff = (compressorClosingRPM || 0) - (compressorOpeningRPM || 0);
         await vehicle.update({
-          vehicleRPM: (vehicle.vehicleRPM || 0) + Math.max(0, vehicleRPMDiff),
-          compressorRPM: (vehicle.compressorRPM || 0) + Math.max(0, compressorRPMDiff)
+          vehicleRPM: (vehicle.vehicleRPM || 0) + Math.max(0, vehicleRPMDiff)
         }, { transaction });
 
         const serviceCreates = [];
         if (vehicleServiceDone) serviceCreates.push(Service.create({ serviceRPM: vehicle.vehicleRPM, serviceType: "vehicle", vehicleId, compressorId: vehicle.compressorId, createdBy: req.user.username }, { transaction }));
-        if (compressorServiceDone && compressorId) serviceCreates.push(Service.create({ serviceRPM: vehicle.compressorRPM, serviceType: "compressor", vehicleId, compressorId, createdBy: req.user.username }, { transaction }));
         if (serviceCreates.length) await Promise.all(serviceCreates);
+      }
+    }
+
+    // Update compressor RPM totals
+    if (compressorId) {
+      const compressor = await Compressor.findByPk(compressorId, { transaction });
+      if (compressor) {
+        const compressorRPMDiff = (compressorClosingRPM || 0) - (compressorOpeningRPM || 0);
+        await compressor.update({
+          compressorRPM: (compressor.compressorRPM || 0) + Math.max(0, compressorRPMDiff)
+        }, { transaction });
+
+        if (compressorServiceDone) {
+          await Service.create({
+            serviceRPM: compressor.compressorRPM,
+            serviceType: "compressor",
+            vehicleId,
+            compressorId,
+            createdBy: req.user.username
+          }, { transaction });
+        }
       }
     }
 

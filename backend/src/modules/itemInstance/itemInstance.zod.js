@@ -6,7 +6,7 @@ export const createItemInstanceSchema = z.object({
   status: z.enum(["in_stock", "fitted", "removed"]).optional(),
   currentMeter: z.number().int().nonnegative("Current meter must be non-negative").optional(),
   currentRPM: z.number().int().nonnegative("Current RPM must be non-negative").optional(),
-  serviceSchedule: z.array(z.number().int().positive("Service schedule must contain positive RPM values")).optional(),
+  nextServiceRPM: z.number().int().min(0, "Next service RPM must be non-negative").optional(),
   lastServiceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, expected YYYY-MM-DD").optional(),
   nextServiceDue: z.number().int().nonnegative("Next service due must be non-negative").optional(),
   fittedToVehicleId: z.string().uuid("Invalid vehicle ID format").optional(),

@@ -26,14 +26,27 @@ export default function Login() {
     <>
       <div className="login-container">
         <div className="left-login">
-          
-         
-          <img src={lo} alt="logo" />
-          
-         
-            <h1 className="head">Welcome to venkateswara!</h1>
+          <div className="welcome-container">
+            <div className="logo-container">
+              <img src={lo} alt="logo" className="logo" />
+              <div className="logo-glow"></div>
+            </div>
             
-           
+            <div className="welcome-text">
+              <h1 className="main-title">
+                <span className="title-word">Welcome</span>
+                <span className="title-word">to</span>
+                <span className="title-word">Venkateswara</span>
+                <span className="title-word">Associates</span>
+              </h1>
+              
+              <div className="floating-elements">
+                <div className="floating-circle circle-1"></div>
+                <div className="floating-circle circle-2"></div>
+                <div className="floating-circle circle-3"></div>
+              </div>
+            </div>
+          </div>
         </div>
         <div className="right-login">
           <form action={handleForm}>

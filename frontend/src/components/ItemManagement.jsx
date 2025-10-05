@@ -65,39 +65,7 @@ const ItemManagement = () => {
     fetchItems();
   }, []);
 
-  // Handle form submission
-  // const handleSubmit = async (values) => {
-  //   try {
-  //     if (editingId) {
-  //       await api.put(`/api/items/${editingId}`, values);
-  //       console.log("Updating values:", values);
-  //       message.success("Item updated successfully");
-  //     } else {
-  //       await api.post("/api/items", values);
-  //       console.log("Submitting values:", values);
-  //       message.success("Item created successfully");
-
-  //     }
-
-  //     setShowForm(false);
-  //     setEditingId(null);
-  //     form.resetFields();
-  //     fetchItems(pagination.current, pagination.pageSize);
-  //   } catch (err) {
-  //     console.error("Error saving item", err);
-  //     message.error("Error saving item");
-  //   }
-  // };
-
-  // Handle edit
-  // const handleEdit = (record) => {
-  //   setEditingId(record.id);
-  //   setShowForm(true);
-  //   form.setFieldsValue({
-  //     ...record,
-  //     canBeFitted: record.canBeFitted || false,
-  //   });
-  // };
+ 
 
   // Handle form submission
   const handleSubmit = async (values) => {
@@ -172,6 +140,9 @@ const ItemManagement = () => {
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
             th { background-color: #f2f2f2; }
             .header { text-align: center; margin-bottom: 20px; }
+            .summary { margin: 20px 0; padding: 15px; background-color: #f9f9f9; border-radius: 5px; }
+            .item-detail { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+            .rpm-info { background-color: #e6f7ff; padding: 8px; border-radius: 3px; margin-top: 5px; }
           </style>
         </head>
         <body>
@@ -179,34 +150,41 @@ const ItemManagement = () => {
             <h1>Item Management Report</h1>
             <p>Generated on: ${new Date().toLocaleDateString()}</p>
           </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Item Name</th>
-                <th>Part Number</th>
-                <th>Group Name</th>
-                <th>Units</th>
-                <th>Purchase Rate</th>
-                <th>GST %</th>
-                <th>Can Be Fitted</th>
-                <th>Created By</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${items.map(item => `
-                <tr>
-                  <td>${item.itemName}</td>
-                  <td>${item.partNumber || '-'}</td>
-                  <td>${item.groupName || '-'}</td>
-                  <td>${item.units || '-'}</td>
-                  <td>₹${item.purchaseRate ? Number(item.purchaseRate).toFixed(2) : '0.00'}</td>
-                  <td>${item.gst ? `${item.gst}%` : 'No GST'}</td>
-                  <td>${item.canBeFitted ? 'Yes' : 'No'}</td>
-                  <td>${item.createdBy || '-'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+          
+          <div class="summary">
+            <h3>Summary</h3>
+            <p><strong>Total Items:</strong> ${items.length}</p>
+            <p><strong>Total Stock Value:</strong> ₹${items.reduce((sum, item) => sum + ((item.stock || 0) * (item.purchaseRate || 0)), 0).toLocaleString()}</p>
+            <p><strong>Items with Stock:</strong> ${items.filter(item => (item.stock || 0) > 0).length}</p>
+            <p><strong>Items Out of Stock:</strong> ${items.filter(item => (item.stock || 0) === 0).length}</p>
+          </div>
+          
+          <h3>Item Details</h3>
+          ${items.map(item => `
+            <div class="item-detail">
+              <h4>${item.itemName} (${item.partNumber || 'No Part Number'})</h4>
+              <p><strong>Group:</strong> ${item.groupName || 'N/A'} | <strong>Units:</strong> ${item.units || 'N/A'}</p>
+              <p><strong>Unit Price:</strong> ₹${item.purchaseRate || 0} | <strong>GST:</strong> ${item.gst || 0}%</p>
+              <p><strong>Stock Available:</strong> <span style="color: ${(item.stock || 0) > 0 ? 'green' : 'red'}; font-weight: bold;">${item.stock || 0}</span></p>
+              <p><strong>Can Be Fitted:</strong> ${item.canBeFitted ? 'Yes' : 'No'}</p>
+              ${item.canBeFitted && item.instances && item.instances.length > 0 ? `
+                <div class="rpm-info">
+                  <strong>Item Instances with RPM Tracking:</strong>
+                  <ul>
+                    ${item.instances.map(instance => `
+                      <li>
+                        <strong>${instance.instanceNumber}:</strong> 
+                        Current RPM: ${instance.currentRPM || 0} | 
+                        Status: ${instance.status} | 
+                        Service Schedule: ${instance.serviceSchedule && instance.serviceSchedule.length > 0 ? instance.serviceSchedule.join(', ') + ' RPM' : 'Not set'}
+                        ${instance.fittedToVehicle ? ` | Fitted to: ${instance.fittedToVehicle.vehicleNumber || 'Unknown'}` : ''}
+                      </li>
+                    `).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
         </body>
       </html>
     `);
@@ -239,6 +217,19 @@ const ItemManagement = () => {
         <Tag color={value ? "blue" : "default"}>
           {value ? "Yes" : "No"}
         </Tag>
+      ),
+    },
+    {
+      title: "Stock",
+      dataIndex: "stock",
+      key: "stock",
+      render: (value) => (
+        <Text strong style={{ 
+          color: value > 0 ? '#52c41a' : '#ff4d4f',
+          fontSize: '16px'
+        }}>
+          {value || 0}
+        </Text>
       ),
     },
     {
@@ -380,9 +371,21 @@ const ItemManagement = () => {
                 />
               </Form.Item>
               <Form.Item
+                name="stock"
+                label="Initial Stock"
+                rules={[{ type: 'number', min: 0 }]}
+              >
+                <InputNumber
+                  className="w-full"
+                  min={0}
+                  placeholder="0"
+                />
+              </Form.Item>
+              <Form.Item
                 name="canBeFitted"
                 label="Can Be Fitted to Machine"
                 valuePropName="checked"
+                tooltip="Items marked 'Can Be Fitted' will create individual instances in inventory for RPM tracking"
               >
                 <Switch />
               </Form.Item>

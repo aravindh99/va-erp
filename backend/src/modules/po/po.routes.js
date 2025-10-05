@@ -29,7 +29,7 @@ router.delete(
 );
 router.delete("/:id/hard", authorize("delete"), PoController.hardDelete);
 router.post("/:id/restore", authorize("update"), PoController.restore);
-router.post("/:id/received", authorize("update"), PoController.markAsReceived);
+router.post("/:id/receive", authorize("update"), PoController.receivePO);
 
 
 export default router;
