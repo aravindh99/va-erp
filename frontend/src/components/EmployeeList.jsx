@@ -84,15 +84,20 @@ const EmployeeList = () => {
           ? values.joiningDate.format("YYYY-MM-DD")
           : null,
         status: values.status,
+        advancedAmount: values.advancedAmount ? Number(values.advancedAmount) : 0,
+        remainingAmount: values.advancedAmount ? Number(values.advancedAmount) : 0,
       };
 
       if (editingId) {
         payload.updatedBy = currentUser;
         await api.put(`/api/employeeLists/${editingId}`, payload);
+        
       } else {
         payload.createdBy = currentUser;
         const res = await api.post("/api/employeeLists", payload);
         setEmployees([res.data.data, ...employees]);
+        
+        
       }
 
       setShowForm(false);
@@ -358,6 +363,7 @@ const EmployeeList = () => {
                   formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                   parser={value => value.replace(/₹\s?|(,*)/g, '')}
                   placeholder="Enter advanced amount"
+                  
                 />
               </Form.Item>
             </div>

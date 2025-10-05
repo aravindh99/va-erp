@@ -59,6 +59,10 @@ const CompressorManagement = () => {
         compressorName: values.compressorName,
         compressorType: values.compressorType,
         status: values.status,
+        serialNumber: values.serialNumber || null,
+        purchaseDate: values.purchaseDate ? values.purchaseDate.format("YYYY-MM-DD") : null,
+        startingRPM: values.startingRPM ?? null,
+        currentRPM: values.currentRPM ?? null,
       };
 
       if (editingId) {
@@ -66,6 +70,7 @@ const CompressorManagement = () => {
       } else {
         const res = await api.post("/api/compressors", payload);
         setCompressors([res.data.data, ...compressors]);
+      
       }
 
       setShowForm(false);
@@ -127,18 +132,18 @@ const CompressorManagement = () => {
             </thead>
             <tbody>
               ${(compressors || [])
-                .filter((c) =>
-                  c.compressorName?.toLowerCase().includes(searchTerm.toLowerCase())
-                )
-                .map(
-                  (compressor) => `
+        .filter((c) =>
+          c.compressorName?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .map(
+          (compressor) => `
                 <tr>
                   <td>${compressor.compressorName}</td>
                   <td>${compressor.compressorType}</td>
                   <td>${compressor.status}</td>
                 </tr>`
-                )
-                .join("")}
+        )
+        .join("")}
             </tbody>
           </table>
         </body>
@@ -197,8 +202,8 @@ const CompressorManagement = () => {
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button 
-            icon={<ToolOutlined />} 
+          <Button
+            icon={<ToolOutlined />}
             onClick={() => navigate(`/reports/compressor-service/${record.id}`)}
             title="View Service History"
           />
@@ -267,7 +272,7 @@ const CompressorManagement = () => {
               >
                 <Input onChange={(e) => handleAutoCapitalize(e, (e) => form.setFieldValue('compressorType', e.target.value), 'words')} />
               </Form.Item>
-              
+
               <Form.Item
                 name="status"
                 label="Status"

@@ -125,6 +125,7 @@ const PurchaseOrderComplete = () => {
   const handleSubmit = async (values) => {
     try {
       const payload = {
+        orderNumber: values.orderNumber,
         orderDate: values.orderDate ? values.orderDate.format("YYYY-MM-DD") : null,
         gstInclude: values.gstInclude,
         gstPercent: values.gstInclude ? (values.gstPercent || 18.0) : 0,
@@ -140,14 +141,18 @@ const PurchaseOrderComplete = () => {
           rate: item.rate
         }))
       };
+      console.log("Submitting payload:", payload);
+
 
       if (editingId) {
         await api.put(`/api/pos/${editingId}`, payload);
         message.success("Purchase order updated successfully");
+        
       } else {
         const res = await api.post("/api/pos", payload);
         setPurchaseOrders([res.data.data, ...purchaseOrders]);
         message.success("Purchase order created successfully");
+        console.log("Response from server purchase order:", res.data.data);
       }
 
       setShowForm(false);
@@ -164,20 +169,55 @@ const PurchaseOrderComplete = () => {
   };
 
   // Handle edit
+  // const handleEdit = (record) => {
+  //   setEditingId(record.id);
+  //   setShowCreateForm(true);
+  //   setGstInclude(record.gstInclude);
+  //   createForm.setFieldsValue({
+  //     ...record,
+  //     orderDate: record.orderDate ? dayjs(record.orderDate) : null,
+  //     shippingAddressId: record.shippingAddressId || record.addressId, // Default to billing address if no shipping address
+  //   });
+  //   // Reset GST state when editing
+  //   setTimeout(() => {
+  //     setGstInclude(record.gstInclude);
+  //   }, 100);
+  // };
+
   const handleEdit = (record) => {
-    setEditingId(record.id);
-    setShowCreateForm(true);
+  setEditingId(record.id);
+  setShowCreateForm(true);
+  setGstInclude(record.gstInclude);
+
+  // Pre-fill PO Items
+  setPoItems(record.poItems?.map(pi => ({
+    id: pi.id,
+    itemId: pi.itemId,
+    quantity: pi.quantity,
+    rate: pi.rate,
+    total: pi.total,
+    item: pi.item
+  })) || []);
+
+  // Pre-fill form fields
+  createForm.setFieldsValue({
+    orderNumber: record.orderNumber,
+    orderDate: record.orderDate ? dayjs(record.orderDate) : null,
+    gstInclude: record.gstInclude,
+    gstPercent: record.gstPercent,
+    supplierId: record.supplierId,
+    addressId: record.addressId,
+    shippingAddressId: record.shippingAddressId || record.addressId,
+    siteIds: record.sites?.map(site => site.id) || [], // if PO has sites association
+    notes: record.notes,
+  });
+
+  // Reset GST state after 100ms
+  setTimeout(() => {
     setGstInclude(record.gstInclude);
-    createForm.setFieldsValue({
-      ...record,
-      orderDate: record.orderDate ? dayjs(record.orderDate) : null,
-      shippingAddressId: record.shippingAddressId || record.addressId, // Default to billing address if no shipping address
-    });
-    // Reset GST state when editing
-    setTimeout(() => {
-      setGstInclude(record.gstInclude);
-    }, 100);
+  }, 100);
   };
+
 
   // Handle delete
   const handleDelete = async (id) => {

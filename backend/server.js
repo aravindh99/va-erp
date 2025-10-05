@@ -106,7 +106,7 @@ protectedRoutes.use("/sites", siteRoutes);
 protectedRoutes.use("/suppliers", supplierRoutes);
 
 //address routes
-protectedRoutes.use("/addresses", addressRoutes);
+protectedRoutes.use("/address", addressRoutes);
 
 // Vehicle routes
 protectedRoutes.use("/vehicles", vehicleRoutes);

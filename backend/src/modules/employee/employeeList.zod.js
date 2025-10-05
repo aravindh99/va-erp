@@ -7,6 +7,9 @@ export const createEmployeeSchema = z.object({
   phone: z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits").optional(),
   joiningDate: z.string().date("Invalid date format").optional(),
   status: z.enum(["active", "inactive", "resigned"]).optional(),
+
+    advancedAmount: z.number().nonnegative().optional(),
+  remainingAmount: z.number().nonnegative().optional(),
 });
 
 export const updateEmployeeSchema = createEmployeeSchema.partial();

@@ -1,12 +1,12 @@
 import { z } from "zod";
 
 export const createItemSchema = z.object({
-  itemName: z.string().min(1),
-  partNumber: z.string().min(1),
-  groupName: z.string().min(1),
+  itemName: z.string().min(1).optional(),
+  partNumber: z.string().min(1).optional(),
+  groupName: z.string().min(1).optional(),
   units: z.enum(["kg", "ltr", "mtr", "nos", "set", "unit"]),
-  purchaseRate: z.number().min(0),
-  gst: z.number().min(0),
+  purchaseRate: z.number().min(0).optional(),
+  gst: z.number().min(0).optional(),
   canBeFitted: z.boolean().optional(),
 });
 

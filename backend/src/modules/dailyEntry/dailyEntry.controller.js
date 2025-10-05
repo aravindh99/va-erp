@@ -44,199 +44,523 @@ class DailyEntryCustomController extends BaseController {
     }
   };
 
+  // create = async (req, res, next) => {
+  //   const transaction = await DailyEntry.sequelize.transaction();
+  //   try {
+  //     const { 
+  //       vehicleId, 
+  //       vehicleOpeningRPM, 
+  //       vehicleClosingRPM,
+  //       compressorId, 
+  //       compressorOpeningRPM, 
+  //       compressorClosingRPM, 
+  //       vehicleServiceDone, 
+  //       compressorServiceDone, 
+  //       employeeId, 
+  //       employeeIds = [],
+  //       fittedItems = [],
+  //       removedItems = [],
+  //       notes
+  //     } = req.body;
+
+  //     // Auto-generate reference number if not provided
+  //     const refNo = req.body.refNo || await this.generateRefNo();
+
+  //     // Create entry first
+  //     const entryPayload = { 
+  //       ...req.body, 
+  //       refNo,
+  //       notes: req.body.notes || null,
+  //       createdBy: req.user.username 
+  //     };
+  //     const entry = await DailyEntry.create(entryPayload, { transaction });
+
+  //     // Attach additional employees (many-to-many)
+  //     const additionalIds = Array.isArray(req.body.additionalEmployeeIds) ? req.body.additionalEmployeeIds : [];
+  //     const effectiveEmployeeIds = (employeeIds && Array.isArray(employeeIds) ? employeeIds : additionalIds);
+  //     if (effectiveEmployeeIds && effectiveEmployeeIds.length) {
+  //       const allEmployeeIds = [...new Set([employeeId, ...employeeIds])];
+  //       const rows = allEmployeeIds.map((eid) => ({ dailyEntryId: entry.id, employeeId: eid }));
+  //       await DailyEntryEmployee.bulkCreate(rows, { transaction });
+  //     } else {
+  //       await DailyEntryEmployee.create({ dailyEntryId: entry.id, employeeId }, { transaction });
+  //     }
+
+  //     // Handle item fitting - update ItemInstance
+  //     if (fittedItems && fittedItems.length > 0) {
+  //       for (const item of fittedItems) {
+  //         // Find the ItemInstance
+  //         const itemInstance = await ItemInstance.findByPk(item.itemInstanceId, { transaction });
+  //         if (itemInstance && itemInstance.status === 'in_stock') {
+  //           // Update ItemInstance to fitted status
+  //           await itemInstance.update({
+  //             status: 'fitted',
+  //             fittedToVehicleId: vehicleId,
+  //             fittedDate: entry.date,
+  //             updatedBy: req.user?.username || "system"
+  //           }, { transaction });
+
+  //           // Update meter and RPM from daily entry
+  //           const meterIncrement = item.meterIncrement || 0;
+  //           const rpmIncrement = item.rpmIncrement || 0;
+            
+  //           await itemInstance.update({
+  //             currentMeter: (itemInstance.currentMeter || 0) + meterIncrement,
+  //             currentRPM: (itemInstance.currentRPM || 0) + rpmIncrement,
+  //             updatedBy: req.user?.username || "system"
+  //           }, { transaction });
+
+  //           // Create outward stock transaction
+  //           await StockTransaction.create({
+  //             itemId: itemInstance.itemId,
+  //             type: 'OUT',
+  //             quantity: 1,
+  //             rate: 0,
+  //             reference: 'DAILY_ENTRY_FITTING',
+  //             referenceId: entry.id,
+  //             createdBy: req.user?.username || "system"
+  //           }, { transaction });
+  //         }
+  //       }
+  //     }
+
+  //     // Handle item removal - update ItemInstance
+  //     if (removedItems && removedItems.length > 0) {
+  //       for (const item of removedItems) {
+  //         // Find the ItemInstance
+  //         const itemInstance = await ItemInstance.findByPk(item.itemInstanceId, { transaction });
+  //         if (itemInstance && itemInstance.status === 'fitted' && itemInstance.fittedToVehicleId === vehicleId) {
+  //           // Update ItemInstance to in_stock status
+  //           await itemInstance.update({
+  //             status: 'in_stock',
+  //             fittedToVehicleId: null,
+  //             fittedDate: null,
+  //             removedDate: entry.date,
+  //             updatedBy: req.user?.username || "system"
+  //           }, { transaction });
+
+  //           // Create inward stock transaction for removed items
+  //           await StockTransaction.create({
+  //             itemId: itemInstance.itemId,
+  //             type: 'IN',
+  //             quantity: 1,
+  //             rate: 0,
+  //             reference: 'DAILY_ENTRY_REMOVAL',
+  //             referenceId: entry.id,
+  //             createdBy: req.user?.username || "system"
+  //           }, { transaction });
+  //         }
+  //       }
+  //     }
+
+  //     // Update vehicle RPM totals
+  //     const vehicle = await Vehicle.findByPk(vehicleId, { transaction });
+  //     if (vehicle) {
+  //       const vehicleRPMDiff = (vehicleClosingRPM || 0) - (vehicleOpeningRPM || 0);
+  //       const compressorRPMDiff = (compressorClosingRPM || 0) - (compressorOpeningRPM || 0);
+        
+  //       const updatedVehicleRPM = (vehicle.vehicleRPM || 0) + Math.max(0, vehicleRPMDiff);
+  //       const updatedCompressorRPM = (vehicle.compressorRPM || 0) + Math.max(0, compressorRPMDiff);
+        
+  //       await vehicle.update({ 
+  //         vehicleRPM: updatedVehicleRPM, 
+  //         compressorRPM: updatedCompressorRPM 
+  //       }, { transaction });
+
+  //       // Create service records if needed
+  //       const serviceCreates = [];
+  //       if (vehicleServiceDone) {
+  //         serviceCreates.push(
+  //           Service.create({
+  //             serviceRPM: updatedVehicleRPM,
+  //             serviceType: "vehicle",
+  //             vehicleId: vehicle.id,
+  //             compressorId: vehicle.compressorId,
+  //             createdBy: req.user.username,
+  //           }, { transaction })
+  //         );
+  //       }
+  //       if (compressorServiceDone && compressorId) {
+  //         serviceCreates.push(
+  //           Service.create({
+  //             serviceRPM: updatedCompressorRPM,
+  //             serviceType: "compressor",
+  //             vehicleId: vehicle.id,
+  //             compressorId,
+  //             createdBy: req.user.username,
+  //           }, { transaction })
+  //         );
+  //       }
+
+  //       // Handle spare parts service tracking
+  //       if (fittedItems && fittedItems.length > 0) {
+  //         for (const item of fittedItems) {
+  //           if (item.serviceDone) {
+  //             await ItemService.create({
+  //               itemId: item.itemId,
+  //               vehicleId: vehicle.id,
+  //               serviceRPM: item.startingRPM || 0,
+  //               serviceDate: entry.date,
+  //               dailyEntryId: entry.id,
+  //               notes: `Service completed for ${item.itemName || 'item'} fitted to ${vehicle.vehicleNumber}`,
+  //               createdBy: req.user.username
+  //             }, { transaction });
+  //           }
+  //         }
+  //       }
+
+  //       if (removedItems && removedItems.length > 0) {
+  //         for (const item of removedItems) {
+  //           if (item.serviceDone) {
+  //             await ItemService.create({
+  //               itemId: item.itemId,
+  //               vehicleId: vehicle.id,
+  //               serviceRPM: item.closingRPM || 0,
+  //               serviceDate: entry.date,
+  //               dailyEntryId: entry.id,
+  //               notes: `Service completed for ${item.itemName || 'item'} removed from ${vehicle.vehicleNumber}`,
+  //               createdBy: req.user.username
+  //             }, { transaction });
+  //           }
+  //         }
+  //       }
+  //       if (serviceCreates.length) await Promise.all(serviceCreates);
+  //     }
+
+  //     await transaction.commit();
+
+  //     return res.status(201).json({
+  //       success: true,
+  //       message: `DailyEntry created successfully`,
+  //       data: entry,
+  //     });
+  //   } catch (error) {
+  //     await transaction.rollback();
+  //     next(error);
+  //   }
+  // };
+
   create = async (req, res, next) => {
-    const transaction = await DailyEntry.sequelize.transaction();
-    try {
-      const { 
-        vehicleId, 
-        vehicleOpeningRPM, 
-        vehicleClosingRPM,
-        compressorId, 
-        compressorOpeningRPM, 
-        compressorClosingRPM, 
-        vehicleServiceDone, 
-        compressorServiceDone, 
-        employeeId, 
-        employeeIds = [],
-        fittedItems = [],
-        removedItems = []
-      } = req.body;
+  const transaction = await DailyEntry.sequelize.transaction();
+  try {
+    const { 
+      vehicleId, 
+      vehicleOpeningRPM, 
+      vehicleClosingRPM,
+      compressorId, 
+      compressorOpeningRPM, 
+      compressorClosingRPM, 
+      vehicleServiceDone, 
+      compressorServiceDone, 
+      employeeId, 
+      employeeIds = [],
+      fittedItems = [],
+      removedItems = [],
+      notes,
+      compressorHSD
+    } = req.body;
 
-      // Auto-generate reference number if not provided
-      const refNo = req.body.refNo || await this.generateRefNo();
+    // Auto-generate reference number if not provided
+    const refNo = req.body.refNo || await this.generateRefNo();
 
-      // Create entry first
-      const entryPayload = { 
-        ...req.body, 
-        refNo,
-        createdBy: req.user.username 
-      };
-      const entry = await DailyEntry.create(entryPayload, { transaction });
+    // Create entry first
+    const entryPayload = { 
+      ...req.body, 
+      refNo,
+      notes: notes || null,             // FIX: include notes
+      compressorId: compressorId || null,  // FIX: include compressorId
+      compressorHSD: compressorHSD || null, // FIX: include compressorHSD
+      createdBy: req.user.username 
+    };
+    const entry = await DailyEntry.create(entryPayload, { transaction });
 
-      // Attach additional employees (many-to-many)
-      const additionalIds = Array.isArray(req.body.additionalEmployeeIds) ? req.body.additionalEmployeeIds : [];
-      const effectiveEmployeeIds = (employeeIds && Array.isArray(employeeIds) ? employeeIds : additionalIds);
-      if (effectiveEmployeeIds && effectiveEmployeeIds.length) {
-        const allEmployeeIds = [...new Set([employeeId, ...employeeIds])];
-        const rows = allEmployeeIds.map((eid) => ({ dailyEntryId: entry.id, employeeId: eid }));
-        await DailyEntryEmployee.bulkCreate(rows, { transaction });
-      } else {
-        await DailyEntryEmployee.create({ dailyEntryId: entry.id, employeeId }, { transaction });
+    // Attach all employees (primary + additional) - FIXED
+    const allEmployeeIds = [...new Set([employeeId, ...(req.body.additionalEmployeeIds || [])])];
+    if (allEmployeeIds.length) {
+      const rows = allEmployeeIds.map((eid) => ({ dailyEntryId: entry.id, employeeId: eid }));
+      await DailyEntryEmployee.bulkCreate(rows, { transaction });
+    }
+
+    // Handle item fitting
+    if (fittedItems.length > 0) {
+      for (const item of fittedItems) {
+        if (!item.itemInstanceId) continue;
+        const itemInstance = await ItemInstance.findByPk(item.itemInstanceId, { transaction });
+        if (itemInstance && itemInstance.status === 'in_stock') {
+          await itemInstance.update({
+            status: 'fitted',
+            fittedToVehicleId: vehicleId,
+            fittedDate: entry.date,
+            currentMeter: (itemInstance.currentMeter || 0) + (item.meterIncrement || 0),
+            currentRPM: (itemInstance.currentRPM || 0) + (item.rpmIncrement || 0),
+            updatedBy: req.user?.username || "system"
+          }, { transaction });
+
+          await StockTransaction.create({
+            itemId: itemInstance.itemId,
+            type: 'OUT',
+            quantity: 1,
+            rate: 0,
+            reference: 'DAILY_ENTRY_FITTING',
+            referenceId: entry.id,
+            createdBy: req.user?.username || "system"
+          }, { transaction });
+
+          if (item.serviceDone) {
+            await ItemService.create({
+              itemId: item.itemId,
+              vehicleId,
+              serviceRPM: item.startingRPM || 0,
+              serviceDate: entry.date,
+              dailyEntryId: entry.id,
+              notes: `Service completed for ${item.itemName || 'item'} fitted to vehicle`,
+              createdBy: req.user.username
+            }, { transaction });
+          }
+        }
       }
+    }
 
-      // Handle item fitting - update ItemInstance
-      if (fittedItems && fittedItems.length > 0) {
+    // Handle item removal
+    if (removedItems.length > 0) {
+      for (const item of removedItems) {
+        if (!item.itemInstanceId) continue;
+        const itemInstance = await ItemInstance.findByPk(item.itemInstanceId, { transaction });
+        if (itemInstance && itemInstance.status === 'fitted' && itemInstance.fittedToVehicleId === vehicleId) {
+          await itemInstance.update({
+            status: 'in_stock',
+            fittedToVehicleId: null,
+            fittedDate: null,
+            removedDate: entry.date,
+            updatedBy: req.user?.username || "system"
+          }, { transaction });
+
+          await StockTransaction.create({
+            itemId: itemInstance.itemId,
+            type: 'IN',
+            quantity: 1,
+            rate: 0,
+            reference: 'DAILY_ENTRY_REMOVAL',
+            referenceId: entry.id,
+            createdBy: req.user?.username || "system"
+          }, { transaction });
+
+          if (item.serviceDone) {
+            await ItemService.create({
+              itemId: item.itemId,
+              vehicleId,
+              serviceRPM: item.closingRPM || 0,
+              serviceDate: entry.date,
+              dailyEntryId: entry.id,
+              notes: `Service completed for ${item.itemName || 'item'} removed from vehicle`,
+              createdBy: req.user.username
+            }, { transaction });
+          }
+        }
+      }
+    }
+
+    // Update vehicle RPM totals
+    const vehicle = await Vehicle.findByPk(vehicleId, { transaction });
+    if (vehicle) {
+      const vehicleRPMDiff = (vehicleClosingRPM || 0) - (vehicleOpeningRPM || 0);
+      const compressorRPMDiff = (compressorClosingRPM || 0) - (compressorOpeningRPM || 0);
+      await vehicle.update({
+        vehicleRPM: (vehicle.vehicleRPM || 0) + Math.max(0, vehicleRPMDiff),
+        compressorRPM: (vehicle.compressorRPM || 0) + Math.max(0, compressorRPMDiff)
+      }, { transaction });
+
+      const serviceCreates = [];
+      if (vehicleServiceDone) serviceCreates.push(Service.create({ serviceRPM: vehicle.vehicleRPM, serviceType: "vehicle", vehicleId, compressorId: vehicle.compressorId, createdBy: req.user.username }, { transaction }));
+      if (compressorServiceDone && compressorId) serviceCreates.push(Service.create({ serviceRPM: vehicle.compressorRPM, serviceType: "compressor", vehicleId, compressorId, createdBy: req.user.username }, { transaction }));
+      if (serviceCreates.length) await Promise.all(serviceCreates);
+    }
+
+    await transaction.commit();
+    return res.status(201).json({ success: true, message: "DailyEntry created successfully", data: entry });
+  } catch (error) {
+    await transaction.rollback();
+    next(error);
+  }
+};
+
+update = async (req, res, next) => {
+  const transaction = await DailyEntry.sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { 
+      vehicleId, 
+      vehicleOpeningRPM, 
+      vehicleClosingRPM,
+      compressorId, 
+      compressorOpeningRPM, 
+      compressorClosingRPM, 
+      vehicleServiceDone, 
+      compressorServiceDone, 
+      employeeId, 
+      additionalEmployeeIds = [],
+      fittedItems = [],
+      removedItems = [],
+      notes,
+      compressorHSD
+    } = req.body;
+
+    // Find the existing entry
+    const existingEntry = await DailyEntry.findByPk(id, { transaction });
+    if (!existingEntry) {
+      return res.status(404).json({ success: false, message: "DailyEntry not found" });
+    }
+
+    // Update the main entry
+    const updatePayload = { 
+      ...req.body, 
+      notes: notes || null,
+      compressorId: compressorId || null,
+      compressorHSD: compressorHSD || null,
+      updatedBy: req.user.username 
+    };
+    
+    await existingEntry.update(updatePayload, { transaction });
+
+    // Handle additional employees - delete existing and create new
+    if (req.body.hasOwnProperty('additionalEmployeeIds')) {
+      // Remove all existing employee relationships
+      await DailyEntryEmployee.destroy({
+        where: { dailyEntryId: id },
+        transaction
+      });
+
+      // Add all employees (primary + additional)
+      const allEmployeeIds = [...new Set([employeeId, ...additionalEmployeeIds])];
+      if (allEmployeeIds.length) {
+        const rows = allEmployeeIds.map((eid) => ({ dailyEntryId: id, employeeId: eid }));
+        await DailyEntryEmployee.bulkCreate(rows, { transaction });
+      }
+    }
+
+    // Handle item fitting (if provided)
+    if (req.body.hasOwnProperty('fittedItems')) {
+      // Handle item fitting
+      if (fittedItems.length > 0) {
         for (const item of fittedItems) {
-          // Find the ItemInstance
+          if (!item.itemInstanceId) continue;
           const itemInstance = await ItemInstance.findByPk(item.itemInstanceId, { transaction });
           if (itemInstance && itemInstance.status === 'in_stock') {
-            // Update ItemInstance to fitted status
             await itemInstance.update({
               status: 'fitted',
               fittedToVehicleId: vehicleId,
-              fittedDate: entry.date,
+              fittedDate: existingEntry.date,
+              currentMeter: (itemInstance.currentMeter || 0) + (item.meterIncrement || 0),
+              currentRPM: (itemInstance.currentRPM || 0) + (item.rpmIncrement || 0),
               updatedBy: req.user?.username || "system"
             }, { transaction });
 
-            // Update meter and RPM from daily entry
-            const meterIncrement = item.meterIncrement || 0;
-            const rpmIncrement = item.rpmIncrement || 0;
-            
-            await itemInstance.update({
-              currentMeter: (itemInstance.currentMeter || 0) + meterIncrement,
-              currentRPM: (itemInstance.currentRPM || 0) + rpmIncrement,
-              updatedBy: req.user?.username || "system"
-            }, { transaction });
-
-            // Create outward stock transaction
             await StockTransaction.create({
               itemId: itemInstance.itemId,
               type: 'OUT',
               quantity: 1,
               rate: 0,
               reference: 'DAILY_ENTRY_FITTING',
-              referenceId: entry.id,
+              referenceId: id,
               createdBy: req.user?.username || "system"
             }, { transaction });
+
+            if (item.serviceDone) {
+              await ItemService.create({
+                itemId: item.itemId,
+                vehicleId,
+                serviceRPM: item.startingRPM || 0,
+                serviceDate: existingEntry.date,
+                dailyEntryId: id,
+                notes: `Service completed for ${item.itemName || 'item'} fitted to vehicle`,
+                createdBy: req.user.username
+              }, { transaction });
+            }
           }
         }
       }
+    }
 
-      // Handle item removal - update ItemInstance
-      if (removedItems && removedItems.length > 0) {
+    // Handle item removal (if provided)
+    if (req.body.hasOwnProperty('removedItems')) {
+      if (removedItems.length > 0) {
         for (const item of removedItems) {
-          // Find the ItemInstance
+          if (!item.itemInstanceId) continue;
           const itemInstance = await ItemInstance.findByPk(item.itemInstanceId, { transaction });
           if (itemInstance && itemInstance.status === 'fitted' && itemInstance.fittedToVehicleId === vehicleId) {
-            // Update ItemInstance to in_stock status
             await itemInstance.update({
               status: 'in_stock',
               fittedToVehicleId: null,
               fittedDate: null,
-              removedDate: entry.date,
+              removedDate: existingEntry.date,
               updatedBy: req.user?.username || "system"
             }, { transaction });
 
-            // Create inward stock transaction for removed items
             await StockTransaction.create({
               itemId: itemInstance.itemId,
               type: 'IN',
               quantity: 1,
               rate: 0,
               reference: 'DAILY_ENTRY_REMOVAL',
-              referenceId: entry.id,
+              referenceId: id,
               createdBy: req.user?.username || "system"
             }, { transaction });
+
+            if (item.serviceDone) {
+              await ItemService.create({
+                itemId: item.itemId,
+                vehicleId,
+                serviceRPM: item.closingRPM || 0,
+                serviceDate: existingEntry.date,
+                dailyEntryId: id,
+                notes: `Service completed for ${item.itemName || 'item'} removed from vehicle`,
+                createdBy: req.user.username
+              }, { transaction });
+            }
           }
         }
       }
+    }
 
-      // Update vehicle RPM totals
+    // Update vehicle RPM totals
+    if (vehicleId) {
       const vehicle = await Vehicle.findByPk(vehicleId, { transaction });
       if (vehicle) {
         const vehicleRPMDiff = (vehicleClosingRPM || 0) - (vehicleOpeningRPM || 0);
         const compressorRPMDiff = (compressorClosingRPM || 0) - (compressorOpeningRPM || 0);
-        
-        const updatedVehicleRPM = (vehicle.vehicleRPM || 0) + Math.max(0, vehicleRPMDiff);
-        const updatedCompressorRPM = (vehicle.compressorRPM || 0) + Math.max(0, compressorRPMDiff);
-        
-        await vehicle.update({ 
-          vehicleRPM: updatedVehicleRPM, 
-          compressorRPM: updatedCompressorRPM 
+        await vehicle.update({
+          vehicleRPM: (vehicle.vehicleRPM || 0) + Math.max(0, vehicleRPMDiff),
+          compressorRPM: (vehicle.compressorRPM || 0) + Math.max(0, compressorRPMDiff)
         }, { transaction });
 
-        // Create service records if needed
         const serviceCreates = [];
-        if (vehicleServiceDone) {
-          serviceCreates.push(
-            Service.create({
-              serviceRPM: updatedVehicleRPM,
-              serviceType: "vehicle",
-              vehicleId: vehicle.id,
-              compressorId: vehicle.compressorId,
-              createdBy: req.user.username,
-            }, { transaction })
-          );
-        }
-        if (compressorServiceDone && compressorId) {
-          serviceCreates.push(
-            Service.create({
-              serviceRPM: updatedCompressorRPM,
-              serviceType: "compressor",
-              vehicleId: vehicle.id,
-              compressorId,
-              createdBy: req.user.username,
-            }, { transaction })
-          );
-        }
-
-        // Handle spare parts service tracking
-        if (fittedItems && fittedItems.length > 0) {
-          for (const item of fittedItems) {
-            if (item.serviceDone) {
-              await ItemService.create({
-                itemId: item.itemId,
-                vehicleId: vehicle.id,
-                serviceRPM: item.startingRPM || 0,
-                serviceDate: entry.date,
-                dailyEntryId: entry.id,
-                notes: `Service completed for ${item.itemName || 'item'} fitted to ${vehicle.vehicleNumber}`,
-                createdBy: req.user.username
-              }, { transaction });
-            }
-          }
-        }
-
-        if (removedItems && removedItems.length > 0) {
-          for (const item of removedItems) {
-            if (item.serviceDone) {
-              await ItemService.create({
-                itemId: item.itemId,
-                vehicleId: vehicle.id,
-                serviceRPM: item.closingRPM || 0,
-                serviceDate: entry.date,
-                dailyEntryId: entry.id,
-                notes: `Service completed for ${item.itemName || 'item'} removed from ${vehicle.vehicleNumber}`,
-                createdBy: req.user.username
-              }, { transaction });
-            }
-          }
-        }
+        if (vehicleServiceDone) serviceCreates.push(Service.create({ serviceRPM: vehicle.vehicleRPM, serviceType: "vehicle", vehicleId, compressorId: vehicle.compressorId, createdBy: req.user.username }, { transaction }));
+        if (compressorServiceDone && compressorId) serviceCreates.push(Service.create({ serviceRPM: vehicle.compressorRPM, serviceType: "compressor", vehicleId, compressorId, createdBy: req.user.username }, { transaction }));
         if (serviceCreates.length) await Promise.all(serviceCreates);
       }
-
-      await transaction.commit();
-
-      return res.status(201).json({
-        success: true,
-        message: `DailyEntry created successfully`,
-        data: entry,
-      });
-    } catch (error) {
-      await transaction.rollback();
-      next(error);
     }
-  };
+
+    await transaction.commit();
+
+    // Fetch the updated entry with relationships
+    const updatedEntry = await DailyEntry.findByPk(id, {
+      include: [
+        { model: EmployeeList, as: "primaryEmployee", attributes: ["id", "name", "empId"] },
+        { model: EmployeeList, as: "employees", attributes: ["id", "name", "empId"] },
+      ],
+    });
+
+    return res.json({ 
+      success: true, 
+      message: "DailyEntry updated successfully", 
+      data: updatedEntry 
+    });
+  } catch (error) {
+    await transaction.rollback();
+    next(error);
+  }
+};
+
 
   getAll = async (req, res, next) => {
     try {

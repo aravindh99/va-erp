@@ -47,7 +47,7 @@ const ItemManagement = () => {
     try {
       const res = await api.get(`/api/items?page=${page}&limit=${limit}`);
       setItems(res.data.data || []);
-      
+
       // Update pagination state
       setPagination(prev => ({
         ...prev,
@@ -66,16 +66,59 @@ const ItemManagement = () => {
   }, []);
 
   // Handle form submission
+  // const handleSubmit = async (values) => {
+  //   try {
+  //     if (editingId) {
+  //       await api.put(`/api/items/${editingId}`, values);
+  //       console.log("Updating values:", values);
+  //       message.success("Item updated successfully");
+  //     } else {
+  //       await api.post("/api/items", values);
+  //       console.log("Submitting values:", values);
+  //       message.success("Item created successfully");
+
+  //     }
+
+  //     setShowForm(false);
+  //     setEditingId(null);
+  //     form.resetFields();
+  //     fetchItems(pagination.current, pagination.pageSize);
+  //   } catch (err) {
+  //     console.error("Error saving item", err);
+  //     message.error("Error saving item");
+  //   }
+  // };
+
+  // Handle edit
+  // const handleEdit = (record) => {
+  //   setEditingId(record.id);
+  //   setShowForm(true);
+  //   form.setFieldsValue({
+  //     ...record,
+  //     canBeFitted: record.canBeFitted || false,
+  //   });
+  // };
+
+  // Handle form submission
   const handleSubmit = async (values) => {
     try {
+      // Ensure numeric fields are numbers
+      const payload = {
+        ...values,
+        purchaseRate: Number(values.purchaseRate),
+        gst: values.gst !== undefined ? Number(values.gst) : 0,
+      };
+
       if (editingId) {
-        await api.put(`/api/items/${editingId}`, values);
+        await api.put(`/api/items/${editingId}`, payload);
+
         message.success("Item updated successfully");
       } else {
-        await api.post("/api/items", values);
+        await api.post("/api/items", payload);
+
         message.success("Item created successfully");
       }
-      
+
       setShowForm(false);
       setEditingId(null);
       form.resetFields();
@@ -92,9 +135,12 @@ const ItemManagement = () => {
     setShowForm(true);
     form.setFieldsValue({
       ...record,
+      purchaseRate: Number(record.purchaseRate) || 0,
+      gst: record.gst !== undefined ? Number(record.gst) : 0,
       canBeFitted: record.canBeFitted || false,
     });
   };
+
 
   // Handle hard delete
   const handleDelete = async (id) => {
@@ -280,6 +326,7 @@ const ItemManagement = () => {
                 rules={[{ required: true }]}
               >
                 <Input onChange={(e) => handleAutoCapitalize(e, (e) => form.setFieldValue('itemName', e.target.value), 'words')} />
+
               </Form.Item>
               <Form.Item name="partNumber" label="Part Number">
                 <Input onChange={(e) => handleAutoCapitalize(e, (e) => form.setFieldValue('partNumber', e.target.value), 'upper')} />

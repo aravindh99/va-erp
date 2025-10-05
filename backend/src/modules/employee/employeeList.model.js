@@ -40,12 +40,12 @@ const EmployeeList = sequelize.define(
     advancedAmount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: true,
-      defaultValue: 0,
+      defaultValue: null,
     },
     remainingAmount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: true,
-      defaultValue: 0,
+      defaultValue: null,
     },
     ...commonFields,
   },

@@ -33,6 +33,15 @@ const Po = sequelize.define(
         model: "address",
         key: "id",
       },
+
+    },
+    shippingAddressId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "address",
+        key: "id",
+      },
     },
     subTotal: {
       type: DataTypes.FLOAT,

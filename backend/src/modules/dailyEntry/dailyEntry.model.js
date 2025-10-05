@@ -37,16 +37,16 @@ const DailyEntry = sequelize.define(
       allowNull: true,
     },
     // Diesel and meter readings
-  dieselUsed: {
+    dieselUsed: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-  // HSD usage
-  vehicleHSD: {
+    // HSD usage
+    vehicleHSD: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-  compressorHSD: {
+    compressorHSD: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
@@ -68,6 +68,11 @@ const DailyEntry = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+
     // Primary employee (required)
     employeeId: {
       type: DataTypes.UUID,

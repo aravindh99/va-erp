@@ -82,7 +82,7 @@ const DailyEntry = () => {
     try {
       console.log("Fetching daily entries with:", { page, limit });
       let res;
-      
+
       try {
         res = await api.get(`/api/dailyEntries?page=${page}&limit=${limit}`);
         console.log("Daily entries response (with pagination):", res.data);
@@ -91,7 +91,7 @@ const DailyEntry = () => {
         res = await api.get("/api/dailyEntries");
         console.log("Daily entries response (without pagination):", res.data);
       }
-      
+
       setEntries(res.data.data || []);
       setPagination(prev => ({
         ...prev,
@@ -177,7 +177,7 @@ const DailyEntry = () => {
   const handleMachineChange = (machineId) => {
     const machine = machines.find(m => m.id === machineId);
     setSelectedMachine(machine);
-    
+
     if (machine && machine.compressorId) {
       const compressor = compressors.find(c => c.id === machine.compressorId);
       setSelectedCompressor(compressor);
@@ -193,15 +193,15 @@ const DailyEntry = () => {
   const handleRPMChange = (field, value) => {
     const numValue = value || 0;
     form.setFieldValue(field, numValue);
-    
+
     // Update RPM values state for real-time calculation
     setRpmValues(prev => ({
       ...prev,
-      [field === 'vehicleOpeningRPM' ? 'vehicleOpening' : 
-       field === 'vehicleClosingRPM' ? 'vehicleClosing' :
-       field === 'compressorOpeningRPM' ? 'compressorOpening' : 'compressorClosing']: numValue
+      [field === 'vehicleOpeningRPM' ? 'vehicleOpening' :
+        field === 'vehicleClosingRPM' ? 'vehicleClosing' :
+          field === 'compressorOpeningRPM' ? 'compressorOpening' : 'compressorClosing']: numValue
     }));
-    
+
     // Force form to re-render and recalculate
     setTimeout(() => {
       form.validateFields([field]);
@@ -280,37 +280,58 @@ const DailyEntry = () => {
   const handleSubmit = async (values) => {
     try {
       const refNo = values.refNo || await generateRefNo();
+
+      // Debug form values
+      console.log("Form values received:", values);
+      console.log("Fitted items from state:", fittedItems);
+      console.log("Additional employee IDs:", values.additionalEmployeeIds);
+      console.log("Notes value:", values.notes);
+      console.log("Notes type:", typeof values.notes);
       
+      // Ensure we have valid form values
+      const formValues = {
+        ...values,
+        notes: values.notes || "",
+        additionalEmployeeIds: values.additionalEmployeeIds || [],
+      };
+      
+      console.log("Processed form values:", formValues);
+
       const payload = {
         refNo,
-        date: values.date ? values.date.format("YYYY-MM-DD") : dayjs().format("YYYY-MM-DD"),
-        siteId: values.siteId,
-        vehicleId: values.vehicleId,
+        date: formValues.date ? formValues.date.format("YYYY-MM-DD") : dayjs().format("YYYY-MM-DD"),
+        siteId: formValues.siteId,
+        vehicleId: formValues.vehicleId,
         compressorId: selectedCompressor?.id,
-        vehicleOpeningRPM: values.vehicleOpeningRPM || 0,
-        vehicleClosingRPM: values.vehicleClosingRPM || 0,
-        compressorOpeningRPM: values.compressorOpeningRPM || 0,
-        compressorClosingRPM: values.compressorClosingRPM || 0,
-        dieselUsed: values.dieselUsed || 0,
-        vehicleHSD: values.vehicleHSD || 0,
-        compressorHSD: values.compressorHSD || 0,
-        noOfHoles: values.noOfHoles || 0,
-        meter: values.meter || 0,
-        employeeId: values.employeeId,
-        additionalEmployeeIds: values.additionalEmployeeIds || [],
-        vehicleServiceDone: values.vehicleServiceDone || false,
-        compressorServiceDone: values.compressorServiceDone || false,
-        notes: values.notes || "",
-        fittedItems: fittedItems,
-        removedItems: removedItems,
+        vehicleOpeningRPM: formValues.vehicleOpeningRPM || 0,
+        vehicleClosingRPM: formValues.vehicleClosingRPM || 0,
+        compressorOpeningRPM: formValues.compressorOpeningRPM || 0,
+        compressorClosingRPM: formValues.compressorClosingRPM || 0,
+        dieselUsed: formValues.dieselUsed || 0,
+        vehicleHSD: formValues.vehicleHSD || 0,
+        compressorHSD: formValues.compressorHSD || 0,
+        noOfHoles: formValues.noOfHoles || 0,
+        meter: formValues.meter || 0,
+        employeeId: formValues.employeeId,
+        additionalEmployeeIds: Array.isArray(formValues.additionalEmployeeIds) ? formValues.additionalEmployeeIds : [],
+        vehicleServiceDone: Boolean(formValues.vehicleServiceDone),
+        compressorServiceDone: Boolean(formValues.compressorServiceDone),
+        notes: String(formValues.notes || ""),
+        fittedItems: Array.isArray(fittedItems) ? fittedItems : [],
+        removedItems: Array.isArray(removedItems) ? removedItems : [],
       };
+
+      console.log("daily entry Payload before submit:", payload);
+      console.log("Payload notes:", payload.notes);
+      console.log("Payload additionalEmployeeIds:", payload.additionalEmployeeIds);
+      console.log("Payload fittedItems:", payload.fittedItems);
 
       if (editingId) {
         console.log("Updating daily entry");
         const res = await api.put(`/api/dailyEntries/${editingId}`, payload);
         console.log("Update response:", res.data);
         setEntries(entries.map(entry => entry.id === editingId ? res.data.data : entry));
-        
+
         if (res.data.notifications) {
           setNotifications(res.data.notifications);
           res.data.notifications.forEach(notification => {
@@ -322,7 +343,7 @@ const DailyEntry = () => {
         const res = await api.post("/api/dailyEntries", payload);
         console.log("Create response:", res.data);
         setEntries([res.data.data, ...entries]);
-        
+
         if (res.data.notifications) {
           setNotifications(res.data.notifications);
           res.data.notifications.forEach(notification => {
@@ -335,6 +356,7 @@ const DailyEntry = () => {
       setEditingId(null);
       form.resetFields();
       setFittedItems([]);
+      setRemovedItems([]);
       setSelectedMachine(null);
       setSelectedCompressor(null);
       setServiceAlerts([]);
@@ -349,13 +371,24 @@ const DailyEntry = () => {
   const handleEdit = (record) => {
     setEditingId(record.id);
     setShowForm(true);
+    
+    // Set form values including notes, additional employees, and spare parts
     form.setFieldsValue({
       ...record,
       date: record.date ? dayjs(record.date) : null,
+      notes: record.notes || "",
+      additionalEmployeeIds: record.additionalEmployeeIds || [],
     });
-    
+
+    // Set spare parts (fitted items) from the record
+    if (record.fittedItems && Array.isArray(record.fittedItems)) {
+      setFittedItems(record.fittedItems);
+    } else {
+      setFittedItems([]);
+    }
+
     if (record.vehicleId) {
-      handleVehicleChange(record.vehicleId);
+      handleMachineChange(record.vehicleId);
     }
   };
 
@@ -379,8 +412,8 @@ const DailyEntry = () => {
       key: "date",
       render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
     },
-    { 
-      title: "Machine", 
+    {
+      title: "Machine",
       key: "machine",
       render: (_, record) => {
         const machine = record.vehicle || machines.find(m => m.id === record.vehicleId);
@@ -509,443 +542,506 @@ const DailyEntry = () => {
       {/* Daily Entry Form */}
       {showForm && (
         <Card title={editingId ? "Edit Daily Entry" : "Add Daily Entry"} className="mb-6">
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          className="space-y-4"
-        >
-          <Collapse defaultActiveKey={['basic', 'rpm', 'production', 'employees', 'service']}>
-            {/* Basic Information */}
-            <Panel header="Basic Information" key="basic">
-              <Row gutter={16}>
-                <Col xs={24} sm={8}>
-              <Form.Item
-                name="refNo"
-                label="Reference Number"
-                rules={[{ required: true, message: "Reference number is required" }]}
-              >
-                <Input placeholder="VA-001" disabled />
-              </Form.Item>
-                </Col>
-                <Col xs={24} sm={8}>
-              <Form.Item
-                name="date"
-                label="Date"
-                    rules={[{ required: true, message: "Please select date" }]}
-                    initialValue={dayjs()}
-              >
-                <DatePicker className="w-full" />
-              </Form.Item>
-                </Col>
-                <Col xs={24} sm={8}>
-              <Form.Item
-                name="siteId"
-                label="Site"
-                    rules={[{ required: true, message: "Please select site" }]}
-              >
-                <Select placeholder="Select site">
-                  {sites.map((site) => (
-                    <Select.Option key={site.id} value={site.id}>
-                      {site.siteName}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
-              <Form.Item
-                name="vehicleId"
-                label="Machine"
-                rules={[{ required: true, message: "Please select machine" }]}
-                  >
-                    <Select 
-                      placeholder="Select machine"
-                      onChange={handleMachineChange}
-                      showSearch
-                      optionFilterProp="children"
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSubmit}
+            className="space-y-4"
+            initialValues={{
+              notes: "",
+              additionalEmployeeIds: [],
+              vehicleServiceDone: false,
+              compressorServiceDone: false,
+            }}
+          >
+            <Collapse defaultActiveKey={['basic', 'rpm', 'production', 'employees', 'service']}>
+              {/* Basic Information */}
+              <Panel header="Basic Information" key="basic">
+                <Row gutter={16}>
+                  <Col xs={24} sm={8}>
+                    <Form.Item
+                      name="refNo"
+                      label="Reference Number"
+                      rules={[{ required: true, message: "Reference number is required" }]}
                     >
-                  {machines.map((machine) => (
-                    <Select.Option key={machine.id} value={machine.id}>
-                          {machine.vehicleType || machine.vehicleNumber}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="compressorId"
-                    label="Compressor"
-                  >
-                    <Select 
-                      placeholder="Select compressor"
-                      disabled={!selectedCompressor}
-                      value={selectedCompressor?.id}
+                      <Input placeholder="VA-001" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <Form.Item
+                      name="date"
+                      label="Date"
+                      rules={[{ required: true, message: "Please select date" }]}
+                      initialValue={dayjs()}
                     >
-                      {selectedCompressor && (
-                        <Select.Option key={selectedCompressor.id} value={selectedCompressor.id}>
-                          {selectedCompressor.compressorName} - {selectedCompressor.compressorType}
-                        </Select.Option>
-                      )}
-                    </Select>
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Panel>
-
-            {/* RPM Tracking */}
-            <Panel header="RPM Tracking" key="rpm">
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
-                  <Card title={`${selectedMachine?.vehicleType || 'Machine'} RPM`} size="small">
-                    <Row gutter={8}>
-                      <Col span={12}>
-                        <Form.Item
-                          name="vehicleOpeningRPM"
-                          label="Opening RPM"
-                          rules={[
-                            { type: 'number', min: 0 },
-                            ({ getFieldValue }) => ({
-                              validator(_, value) {
-                                const closingRPM = getFieldValue('vehicleClosingRPM');
-                                if (value && closingRPM && value > closingRPM) {
-                                  return Promise.reject(new Error('Opening RPM cannot be higher than Closing RPM'));
-                                }
-                                return Promise.resolve();
-                              },
-                            }),
-                          ]}
-                        >
-                          <InputNumber 
-                            className="w-full" 
-                            min={0} 
-                            placeholder="0"
-                            onChange={(value) => handleRPMChange('vehicleOpeningRPM', value)}
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item
-                          name="vehicleClosingRPM"
-                          label="Closing RPM"
-                          rules={[
-                            { type: 'number', min: 0 },
-                            ({ getFieldValue }) => ({
-                              validator(_, value) {
-                                const openingRPM = getFieldValue('vehicleOpeningRPM');
-                                if (value && openingRPM && openingRPM > value) {
-                                  return Promise.reject(new Error('Closing RPM cannot be lower than Opening RPM'));
-                                }
-                                return Promise.resolve();
-                              },
-                            }),
-                          ]}
-                        >
-                          <InputNumber 
-                            className="w-full" 
-                            min={0} 
-                            placeholder="0"
-                            onChange={(value) => handleRPMChange('vehicleClosingRPM', value)}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <div className="text-center">
-                      <Text strong>
-                        Total: {rpmValues.vehicleClosing - rpmValues.vehicleOpening} RPM
-                      </Text>
-                    </div>
-                  </Card>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Card title="Compressor RPM" size="small">
-                    <Row gutter={8}>
-                      <Col span={12}>
-                        <Form.Item
-                          name="compressorOpeningRPM"
-                          label="Opening RPM"
-                          rules={[
-                            { type: 'number', min: 0 },
-                            ({ getFieldValue }) => ({
-                              validator(_, value) {
-                                const closingRPM = getFieldValue('compressorClosingRPM');
-                                if (value && closingRPM && value > closingRPM) {
-                                  return Promise.reject(new Error('Opening RPM cannot be higher than Closing RPM'));
-                                }
-                                return Promise.resolve();
-                              },
-                            }),
-                          ]}
-                        >
-                          <InputNumber 
-                            className="w-full" 
-                            min={0} 
-                            placeholder="0"
-                            onChange={(value) => handleRPMChange('compressorOpeningRPM', value)}
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col span={12}>
-                        <Form.Item
-                          name="compressorClosingRPM"
-                          label="Closing RPM"
-                          rules={[
-                            { type: 'number', min: 0 },
-                            ({ getFieldValue }) => ({
-                              validator(_, value) {
-                                const openingRPM = getFieldValue('compressorOpeningRPM');
-                                if (value && openingRPM && openingRPM > value) {
-                                  return Promise.reject(new Error('Closing RPM cannot be lower than Opening RPM'));
-                                }
-                                return Promise.resolve();
-                              },
-                            }),
-                          ]}
-                        >
-                          <InputNumber 
-                            className="w-full" 
-                            min={0} 
-                            placeholder="0"
-                            onChange={(value) => handleRPMChange('compressorClosingRPM', value)}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <div className="text-center">
-                      <Text strong>
-                        Total: {rpmValues.compressorClosing - rpmValues.compressorOpening} RPM
-                      </Text>
-                    </div>
-                  </Card>
-                </Col>
-              </Row>
-            </Panel>
-
-            {/* Production Data */}
-            <Panel header="Production Data" key="production">
-              <Row gutter={16}>
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    name="dieselUsed"
-                    label="Diesel Used (L)"
-                    rules={[{ type: 'number', min: 0 }]}
-                  >
-                    <InputNumber className="w-full" min={0} placeholder="0" />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    name="vehicleHSD"
-                    label="Machine HSD"
-                    rules={[{ type: 'number', min: 0 }]}
-                  >
-                    <InputNumber className="w-full" min={0} placeholder="0" />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    name="compressorHSD"
-                    label="Compressor HSD"
-                    rules={[{ type: 'number', min: 0 }]}
-                  >
-                    <InputNumber className="w-full" min={0} placeholder="0" />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    name="noOfHoles"
-                    label="Number of Holes"
-                    rules={[{ type: 'number', min: 0 }]}
-                  >
-                    <InputNumber className="w-full" min={0} placeholder="0" />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="meter"
-                    label="Total Production Meter"
-                    rules={[{ type: 'number', min: 0 }]}
-                  >
-                    <InputNumber className="w-full" min={0} placeholder="0" />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="notes"
-                    label="Notes"
-                  >
-                    <Input.TextArea rows={2} placeholder="Additional notes..." />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Panel>
-
-            {/* Employee Assignment */}
-            <Panel header="Employee Assignment" key="employees">
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
-              <Form.Item
-                name="employeeId"
-                label="Primary Employee"
-                    rules={[{ required: true, message: "Please select primary employee" }]}
-              >
-                <Select placeholder="Select primary employee">
-                  {employees.map((employee) => (
-                    <Select.Option key={employee.id} value={employee.id}>
-                          {employee.name} ({employee.empId})
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-                </Col>
-                <Col xs={24} sm={12}>
-              <Form.Item
-                    name="additionalEmployeeIds"
-                label="Additional Employees"
-              >
-                <Select 
-                  mode="multiple" 
-                  placeholder="Select additional employees"
-                  allowClear
-                >
-                  {employees.map((employee) => (
-                    <Select.Option key={employee.id} value={employee.id}>
-                          {employee.name} ({employee.empId})
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-                </Col>
-              </Row>
-            </Panel>
-
-            {/* Spare Parts Management */}
-            <Panel header="Spare Parts Management" key="spares">
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
-                  <Card title="Fitted Items" size="small">
-                    <div className="mb-4">
-                      <Button 
-                        type="dashed" 
-                        onClick={() => setShowItemForm(true)}
-                        className="w-full"
-                        icon={<PlusOutlined />}
-                      >
-                        Add Spare Parts
-                      </Button>
-                    </div>
-                    {fittedItems.length > 0 && (
-                      <div className="space-y-2">
-                        {fittedItems.map((item, index) => (
-                          <div key={index} className="p-2 border rounded bg-gray-50">
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <Text strong>{item.itemName}</Text>
-                                <br />
-                                <Text type="secondary" className="text-sm">
-                                  Starting RPM: {item.startingRPM || 0}
-                                </Text>
-                              </div>
-                              <Button 
-                                size="small" 
-                                danger 
-                                onClick={() => {
-                                  setFittedItems(fittedItems.filter((_, i) => i !== index));
-                                }}
-                              >
-                                Remove
-                              </Button>
-                            </div>
-                          </div>
+                      <DatePicker className="w-full" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <Form.Item
+                      name="siteId"
+                      label="Site"
+                      rules={[{ required: true, message: "Please select site" }]}
+                    >
+                      <Select placeholder="Select site">
+                        {sites.map((site) => (
+                          <Select.Option key={site.id} value={site.id}>
+                            {site.siteName}
+                          </Select.Option>
                         ))}
-                      </div>
-                    )}
-                  </Card>
-                </Col>
-                
-              </Row>
-            </Panel>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      name="vehicleId"
+                      label="Machine"
+                      rules={[{ required: true, message: "Please select machine" }]}
+                    >
+                      <Select
+                        placeholder="Select machine"
+                        onChange={handleMachineChange}
+                        showSearch
+                        optionFilterProp="children"
+                      >
+                        {machines.map((machine) => (
+                          <Select.Option key={machine.id} value={machine.id}>
+                            {machine.vehicleType || machine.vehicleNumber}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      name="compressorId"
+                      label="Compressor"
+                    >
+                      <Select
+                        placeholder="Select compressor"
+                        disabled={!selectedCompressor}
+                        value={selectedCompressor?.id}
+                      >
+                        {selectedCompressor && (
+                          <Select.Option key={selectedCompressor.id} value={selectedCompressor.id}>
+                            {selectedCompressor.compressorName} - {selectedCompressor.compressorType}
+                          </Select.Option>
+                        )}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Panel>
 
-            {/* Service Status */}
-            <Panel header="Service Status" key="service">
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
-                  <Card title="Machine Service" size="small">
-              <Form.Item
-                name="vehicleServiceDone"
-                valuePropName="checked"
-              >
-                      <Switch 
-                        checkedChildren="Done" 
-                        unCheckedChildren="Pending"
-                      />
-              </Form.Item>
-                    {selectedMachine && (
-                      <div className="mt-2">
-                        <Text type="secondary" className="text-sm">
-                          Current RPM: {selectedMachine.vehicleRPM || 0}
-                        </Text>
-                        <br />
-                        <Text type="secondary" className="text-sm">
-                          Next Service: {selectedMachine.vehicleServiceSchedule?.[0] || 'Not set'}
+              {/* RPM Tracking */}
+              <Panel header="RPM Tracking" key="rpm">
+                <Row gutter={16}>
+                  <Col xs={24} sm={12}>
+                    <Card title={`${selectedMachine?.vehicleType || 'Machine'} RPM`} size="small">
+                      <Row gutter={8}>
+                        <Col span={12}>
+                          <Form.Item
+                            name="vehicleOpeningRPM"
+                            label="Opening RPM"
+                            rules={[
+                              { type: 'number', min: 0 },
+                              ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                  const closingRPM = getFieldValue('vehicleClosingRPM');
+                                  if (value && closingRPM && value > closingRPM) {
+                                    return Promise.reject(new Error('Opening RPM cannot be higher than Closing RPM'));
+                                  }
+                                  return Promise.resolve();
+                                },
+                              }),
+                            ]}
+                          >
+                            <InputNumber
+                              className="w-full"
+                              min={0}
+                              placeholder="0"
+                              onChange={(value) => handleRPMChange('vehicleOpeningRPM', value)}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                          <Form.Item
+                            name="vehicleClosingRPM"
+                            label="Closing RPM"
+                            rules={[
+                              { type: 'number', min: 0 },
+                              ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                  const openingRPM = getFieldValue('vehicleOpeningRPM');
+                                  if (value && openingRPM && openingRPM > value) {
+                                    return Promise.reject(new Error('Closing RPM cannot be lower than Opening RPM'));
+                                  }
+                                  return Promise.resolve();
+                                },
+                              }),
+                            ]}
+                          >
+                            <InputNumber
+                              className="w-full"
+                              min={0}
+                              placeholder="0"
+                              onChange={(value) => handleRPMChange('vehicleClosingRPM', value)}
+                            />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                      <div className="text-center">
+                        <Text strong>
+                          Total: {rpmValues.vehicleClosing - rpmValues.vehicleOpening} RPM
                         </Text>
                       </div>
-                    )}
-                  </Card>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Card title="Compressor Service" size="small">
-              <Form.Item
-                name="compressorServiceDone"
-                valuePropName="checked"
-              >
-                      <Switch 
-                        checkedChildren="Done" 
-                        unCheckedChildren="Pending"
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Card title="Compressor RPM" size="small">
+                      <Row gutter={8}>
+                        <Col span={12}>
+                          <Form.Item
+                            name="compressorOpeningRPM"
+                            label="Opening RPM"
+                            rules={[
+                              { type: 'number', min: 0 },
+                              ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                  const closingRPM = getFieldValue('compressorClosingRPM');
+                                  if (value && closingRPM && value > closingRPM) {
+                                    return Promise.reject(new Error('Opening RPM cannot be higher than Closing RPM'));
+                                  }
+                                  return Promise.resolve();
+                                },
+                              }),
+                            ]}
+                          >
+                            <InputNumber
+                              className="w-full"
+                              min={0}
+                              placeholder="0"
+                              onChange={(value) => handleRPMChange('compressorOpeningRPM', value)}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                          <Form.Item
+                            name="compressorClosingRPM"
+                            label="Closing RPM"
+                            rules={[
+                              { type: 'number', min: 0 },
+                              ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                  const openingRPM = getFieldValue('compressorOpeningRPM');
+                                  if (value && openingRPM && openingRPM > value) {
+                                    return Promise.reject(new Error('Closing RPM cannot be lower than Opening RPM'));
+                                  }
+                                  return Promise.resolve();
+                                },
+                              }),
+                            ]}
+                          >
+                            <InputNumber
+                              className="w-full"
+                              min={0}
+                              placeholder="0"
+                              onChange={(value) => handleRPMChange('compressorClosingRPM', value)}
+                            />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                      <div className="text-center">
+                        <Text strong>
+                          Total: {rpmValues.compressorClosing - rpmValues.compressorOpening} RPM
+                        </Text>
+                      </div>
+                    </Card>
+                  </Col>
+                </Row>
+              </Panel>
+
+              {/* Production Data */}
+              <Panel header="Production Data" key="production">
+                <Row gutter={16}>
+                  <Col xs={24} sm={8}>
+                    <Form.Item
+                      name="dieselUsed"
+                      label="Diesel Used (L)"
+                      rules={[{ type: 'number', min: 0 }]}
+                    >
+                      <InputNumber className="w-full" min={0} placeholder="0" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <Form.Item
+                      name="vehicleHSD"
+                      label="Machine HSD"
+                      rules={[{ type: 'number', min: 0 }]}
+                    >
+                      <InputNumber className="w-full" min={0} placeholder="0" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <Form.Item
+                      name="compressorHSD"
+                      label="Compressor HSD"
+                      rules={[{ type: 'number', min: 0 }]}
+                    >
+                      <InputNumber className="w-full" min={0} placeholder="0" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <Form.Item
+                      name="noOfHoles"
+                      label="Number of Holes"
+                      rules={[{ type: 'number', min: 0 }]}
+                    >
+                      <InputNumber className="w-full" min={0} placeholder="0" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      name="meter"
+                      label="Total Production Meter"
+                      rules={[{ type: 'number', min: 0 }]}
+                    >
+                      <InputNumber className="w-full" min={0} placeholder="0" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      name="notes"
+                      label="Notes"
+                    >
+                      <Input.TextArea 
+                        rows={2} 
+                        placeholder="Additional notes..." 
                       />
-              </Form.Item>
-                    {selectedCompressor && (
-                      <div className="mt-2">
-                        <Text type="secondary" className="text-sm">
-                          Current RPM: {selectedCompressor.currentRPM || 0}
-                        </Text>
-                        <br />
-                        <Text type="secondary" className="text-sm">
-                          Next Service: {selectedMachine?.compressorServiceSchedule?.[0] || 'Not set'}
-                        </Text>
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Panel>
+
+              {/* Employee Assignment */}
+              {/* <Panel header="Employee Assignment" key="employees">
+                <Row gutter={16}>
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      name="employeeId"
+                      label="Primary Employee"
+                      rules={[{ required: true, message: "Please select primary employee" }]}
+                    >
+                      <Select placeholder="Select primary employee">
+                        {employees.map((employee) => (
+                          <Select.Option key={employee.id} value={employee.id}>
+                            {employee.name} ({employee.empId})
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      name="additionalEmployeeIds"
+                      label="Additional Employees"
+                    >
+                      <Select
+                        mode="multiple"
+                        placeholder="Select additional employees"
+                        allowClear
+                      >
+                        {employees.map((employee) => (
+                          <Select.Option key={employee.id} value={employee.id}>
+                            {employee.name} ({employee.empId})
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Panel>   */}
+
+              <Panel header="Employees" key="employees">
+  <Row gutter={16}>
+    <Col xs={24} sm={12}>
+      <Form.Item
+        name="employeeId"
+        label="Primary Employee"
+        rules={[{ required: true, message: "Please select employee" }]}
+      >
+        <Select placeholder="Select employee" showSearch optionFilterProp="children">
+          {employees.map(emp => (
+            <Select.Option key={emp.id} value={emp.id}>
+              {emp.name} ({emp.empId})
+            </Select.Option>
+          ))}
+        </Select>
+      </Form.Item>
+    </Col>
+
+    <Col xs={24} sm={12}>
+      <Form.Item 
+        name="additionalEmployeeIds" 
+        label="Additional Employees"
+      >
+        <Select
+          mode="multiple"
+          placeholder="Select additional employees"
+          showSearch
+          optionFilterProp="children"
+          allowClear
+        >
+          {employees.map(emp => (
+            <Select.Option key={emp.id} value={emp.id}>
+              {emp.name} ({emp.empId})
+            </Select.Option>
+          ))}
+        </Select>
+      </Form.Item>
+    </Col>
+  </Row>
+</Panel>
+
+
+              {/* Spare Parts Management */}
+              <Panel header="Spare Parts Management" key="spares">
+                <Row gutter={16}>
+                  <Col xs={24} sm={12}>
+                    <Card title="Fitted Items" size="small">
+                      <div className="mb-4">
+                        <Button
+                          type="dashed"
+                          onClick={() => setShowItemForm(true)}
+                          className="w-full"
+                          icon={<PlusOutlined />}
+                        >
+                          Add Spare Parts
+                        </Button>
+                      </div>
+                      {fittedItems.length > 0 && (
+                        <div className="space-y-2">
+                          {fittedItems.map((item, index) => (
+                            <div key={index} className="p-2 border rounded bg-gray-50">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <Text strong>{item.itemName}</Text>
+                                  <br />
+                                  <Text type="secondary" className="text-sm">
+                                    Starting RPM: {item.startingRPM || 0}
+                                  </Text>
+                                </div>
+                                <Button
+                                  size="small"
+                                  danger
+                                  onClick={() => {
+                                    setFittedItems(fittedItems.filter((_, i) => i !== index));
+                                  }}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+                  </Col>
+
+                </Row>
+              </Panel>
+
+              {/* Service Status */}
+              <Panel header="Service Status" key="service">
+                <Row gutter={16}>
+                  <Col xs={24} sm={12}>
+                    <Card title="Machine Service" size="small">
+                      <Form.Item
+                        name="vehicleServiceDone"
+                        valuePropName="checked"
+                      >
+                        <Switch
+                          checkedChildren="Done"
+                          unCheckedChildren="Pending"
+                        />
+                      </Form.Item>
+                      {selectedMachine && (
+                        <div className="mt-2">
+                          <Text type="secondary" className="text-sm">
+                            Current RPM: {selectedMachine.vehicleRPM || 0}
+                          </Text>
+                          <br />
+                          <Text type="secondary" className="text-sm">
+                            Next Service: {selectedMachine.vehicleServiceSchedule?.[0] || 'Not set'}
+                          </Text>
+                        </div>
+                      )}
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Card title="Compressor Service" size="small">
+                      <Form.Item
+                        name="compressorServiceDone"
+                        valuePropName="checked"
+                      >
+                        <Switch
+                          checkedChildren="Done"
+                          unCheckedChildren="Pending"
+                        />
+                      </Form.Item>
+                      {selectedCompressor && (
+                        <div className="mt-2">
+                          <Text type="secondary" className="text-sm">
+                            Current RPM: {selectedCompressor.currentRPM || 0}
+                          </Text>
+                          <br />
+                          <Text type="secondary" className="text-sm">
+                            Next Service: {selectedMachine?.compressorServiceSchedule?.[0] || 'Not set'}
+                          </Text>
+                        </div>
+                      )}
+                    </Card>
+                  </Col>
+                </Row>
+              </Panel>
+            </Collapse>
+
+            <Divider />
+
+            <div className="flex justify-between">
+              <Button 
+                onClick={() => {
+                  const formValues = form.getFieldsValue();
+                  console.log("Current form values:", formValues);
+                  console.log("Fitted items:", fittedItems);
+                  message.info("Form values logged to console");
+                }}
+              >
+                Test Form Values
+              </Button>
+              <div className="flex space-x-2">
+                <Button onClick={() => {
+                  setShowForm(false);
+                  setEditingId(null);
+                  form.resetFields();
+                  setFittedItems([]);
+                  setRemovedItems([]);
+                  setSelectedMachine(null);
+                  setSelectedCompressor(null);
+                  setServiceAlerts([]);
+                }}>
+                  Cancel
+                </Button>
+                <Button type="primary" htmlType="submit">
+                  {editingId ? "Update Entry" : "Create Entry"}
+                </Button>
+              </div>
             </div>
-                    )}
-        </Card>
-                </Col>
-              </Row>
-            </Panel>
-          </Collapse>
-
-          <Divider />
-
-          <div className="flex justify-end space-x-2">
-            <Button onClick={() => {
-              setShowForm(false);
-              setEditingId(null);
-              form.resetFields();
-              setFittedItems([]);
-              setRemovedItems([]);
-              setSelectedMachine(null);
-              setSelectedCompressor(null);
-              setServiceAlerts([]);
-            }}>
-              Cancel
-            </Button>
-            <Button type="primary" htmlType="submit">
-              {editingId ? "Update Entry" : "Create Entry"}
-            </Button>
-          </div>
-        </Form>
+          </Form>
         </Card>
       )}
 
@@ -953,9 +1049,10 @@ const DailyEntry = () => {
       <Card>
         <Table
           columns={columns}
-          dataSource={entries.filter((entry) =>
-            entry.site?.siteName?.toLowerCase().includes(searchTerm.toLowerCase())
-          )}
+          dataSource={entries.filter((entry) => {
+            const site = sites.find(s => s.id === entry.siteId);
+            return site?.siteName?.toLowerCase().includes(searchTerm.toLowerCase());
+          })}
           rowKey="id"
           loading={loading}
           pagination={{
@@ -968,6 +1065,7 @@ const DailyEntry = () => {
           size="middle"
         />
       </Card>
+
 
       {/* Add Spare Parts Modal */}
       <Modal
@@ -1019,7 +1117,7 @@ const DailyEntry = () => {
         </div>
       </Modal>
 
-      
+
     </div>
   );
 };

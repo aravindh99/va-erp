@@ -194,6 +194,8 @@ class PoCustomController extends BaseController {
       next(error);
     }
   };
+
+  
 }
 
 export const PoController = new PoCustomController(PoCrud, "Po");

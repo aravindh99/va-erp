@@ -13,6 +13,7 @@ router.post(
   PoController.create
 );
 router.get("/", authorize("read"), PoController.getAll);
+router.get("/generate-ref", authorize("read"), PoController.generatePONumberAPI);
 router.get("/:id", authorize("read"), PoController.getById);
 router.put(
   "/:id",
@@ -29,6 +30,6 @@ router.delete(
 router.delete("/:id/hard", authorize("delete"), PoController.hardDelete);
 router.post("/:id/restore", authorize("update"), PoController.restore);
 router.post("/:id/received", authorize("update"), PoController.markAsReceived);
-router.get("/generate-ref", authorize("read"), PoController.generatePONumberAPI);
+
 
 export default router;
