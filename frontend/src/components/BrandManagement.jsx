@@ -17,7 +17,7 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import api from "../service/api";
-import { canEdit, canDelete } from "../service/auth";
+import { canEdit, canDelete, canCreate } from "../service/auth";
 import { handleAutoCapitalize } from "../utils/textUtils";
 
 const BrandManagement = () => {
@@ -197,7 +197,7 @@ const BrandManagement = () => {
           >
             Export PDF
           </Button>
-          {canEdit() && (
+          {canCreate() && (
             <Button
               icon={<PlusOutlined />}
               onClick={() => {

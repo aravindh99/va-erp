@@ -16,7 +16,7 @@ class ItemInstanceController extends BaseController {
   // Override getAll to include related data
   getAll = async (req, res, next) => {
     try {
-      const { page = 1, limit = 10, search, status, itemId } = req.query;
+      const { page = 1, limit = 10, search, status, itemId, fittedToVehicleId, vehicleId } = req.query;
       const offset = (page - 1) * limit;
 
       const where = {};
@@ -31,6 +31,11 @@ class ItemInstanceController extends BaseController {
       }
       if (itemId) {
         where.itemId = itemId;
+      }
+      // Allow filtering by fitted machine/vehicle id
+      const effectiveVehicleId = fittedToVehicleId || vehicleId;
+      if (effectiveVehicleId) {
+        where.fittedToVehicleId = effectiveVehicleId;
       }
 
       const { count, rows } = await ItemInstance.findAndCountAll({

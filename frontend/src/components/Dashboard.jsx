@@ -450,20 +450,7 @@ const Dashboard = () => {
               responsive: ['md'],
               render: (_, record) => record.site?.siteName || 'Unknown',
             },
-            {
-              title: "Status",
-              dataIndex: "status",
-              key: "status",
-              render: (status) => {
-                const config = {
-                  present: { color: 'green', text: 'Present' },
-                  absent: { color: 'red', text: 'Absent' },
-                  present_nonworking: { color: 'orange', text: 'Present (Non-working)' },
-                };
-                const { color, text } = config[status] || { color: 'default', text: status };
-                return <Tag color={color}>{text}</Tag>;
-              },
-            },
+            // Removed Status column as requested
             {
               title: "Salary",
               dataIndex: "salary",

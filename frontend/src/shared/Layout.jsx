@@ -4,7 +4,7 @@ import { BellOutlined, ExclamationCircleOutlined, ToolOutlined } from "@ant-desi
 import { Badge, Dropdown, List, Typography, Button, Space } from "antd";
 import vaLogo from "../assets/VA.png";
 import lightLogo from "../assets/hi.jpg";
-import { getUserRole, getUsername } from "../service/auth";
+import { getUserRole, getUsername, isTownAdmin } from "../service/auth";
 import api from "../service/api";
 
 
@@ -109,10 +109,11 @@ export default function Layout() {
 
   // Filter navigation based on user role
   const filteredNavArray = navArray.filter((item) => {
+    // Only xtown-admin should see User Management
     if (item.adminOnly) {
-      // Only show for admin role AND username 'xtown'
-      return getUserRole() === "admin" && (getUsername?.() === "xtown");
+      return isTownAdmin();
     }
+    // Everyone else sees all other items as per normal auth
     return true;
   });
 

@@ -165,13 +165,6 @@ const InventoryManagement = () => {
         </div>
         <Space>
           <Button
-            icon={<PlusOutlined />}
-            onClick={() => setShowAddForm(true)}
-            type="primary"
-          >
-            Add Stock
-          </Button>
-          <Button
             icon={<ReloadOutlined />}
             onClick={fetchData}
             loading={loading}
@@ -252,88 +245,7 @@ const InventoryManagement = () => {
         />
       </Card>
 
-      {/* Add Stock Modal */}
-      <Modal
-        title="Add Stock to Inventory"
-        open={showAddForm}
-        onCancel={() => {
-          setShowAddForm(false);
-          addForm.resetFields();
-        }}
-        footer={null}
-        width={600}
-      >
-        <Form
-          form={addForm}
-          layout="vertical"
-          onFinish={handleAddStock}
-        >
-          <Form.Item
-            name="itemId"
-            label="Select Item"
-            rules={[{ required: true, message: "Please select an item" }]}
-          >
-            <Select
-              placeholder="Select item to add stock"
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-              }
-            >
-              {items.map(item => (
-                <Select.Option key={item.id} value={item.id}>
-                  {item.itemName} - {item.partNumber} {item.canBeFitted ? '(Can be fitted)' : ''}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="quantity"
-            label="Quantity"
-            rules={[{ required: true, message: "Please enter quantity" }]}
-          >
-            <InputNumber
-              className="w-full"
-              min={1}
-              placeholder="Enter quantity to add"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="nextServiceRPM"
-            label="Next Service RPM (For fitted items only)"
-            tooltip="Enter the RPM at which the next service is due"
-          >
-            <InputNumber className="w-full" min={0} placeholder="e.g., 1000" />
-          </Form.Item>
-
-          <Form.Item
-            name="notes"
-            label="Notes (Optional)"
-          >
-            <Input.TextArea
-              placeholder="Add any notes about this item instance"
-              rows={3}
-            />
-          </Form.Item>
-
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit">
-                Add Stock
-              </Button>
-              <Button onClick={() => {
-                setShowAddForm(false);
-                addForm.resetFields();
-              }}>
-                Cancel
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* Add Stock flow removed: handled via Item page and auto on PO receive */}
     </div>
   );
 };

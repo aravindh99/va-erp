@@ -76,7 +76,8 @@ const ProductionReport = () => {
     let totalHoles = 0;
 
     const dailyData = entries.map(entry => {
-      const hsd = entry.dieselUsed || 0;
+      // Vehicle HSD should come from vehicleHSD, not dieselUsed (which is overall)
+      const vehicleHSD = entry.vehicleHSD || 0;
       const meter = entry.meter || 0;
       const vehicleRPM = (entry.vehicleClosingRPM || 0) - (entry.vehicleOpeningRPM || 0);
       const compressorRPM = (entry.compressorClosingRPM || 0) - (entry.compressorOpeningRPM || 0);
@@ -84,10 +85,11 @@ const ProductionReport = () => {
       const compressorHSD = entry.compressorHSD || 0;
 
       // Find machine type
-      const machine = machines.find(m => m.id === entry.vehicleId);
-      const machineType = machine?.vehicleType?.toLowerCase() || '';
-      const isCrawler = machineType.includes('crawler');
-      const isCamper = machineType.includes('camper') || machineType.includes('truck');
+      // Prefer server-provided vehicle info; fallback to machines cache
+      const machineTypeSrc = (entry.vehicle?.vehicleType) || (machines.find(m => m.id === entry.vehicleId)?.vehicleType) || '';
+      const machineType = machineTypeSrc.toString().trim().toLowerCase();
+      const isCrawler = machineType === 'crawler' || machineType.includes('crawler');
+      const isCamper = machineType === 'camper' || machineType.includes('camper') || machineType.includes('truck');
 
       // Calculate HSD breakdown
       let crawlerHSD = 0;
@@ -95,16 +97,16 @@ const ProductionReport = () => {
       let crawlerRPM = 0;
 
       if (isCrawler) {
-        crawlerHSD = hsd;
+        crawlerHSD = vehicleHSD;
         crawlerRPM = vehicleRPM;
       } else if (isCamper) {
-        camperHSD = hsd;
+        camperHSD = vehicleHSD;
       }
 
       const totalHSD = crawlerHSD + camperHSD + compressorHSD;
 
       // Calculate ratios
-      const hsdMtr = meter > 0 ? (hsd / meter).toFixed(2) : 0;
+      const hsdMtr = meter > 0 ? ((totalHSD) / meter).toFixed(2) : 0;
       const mtrRPM = compressorRPM > 0 ? (meter / compressorRPM).toFixed(2) : 0;
       const crawlerHsdPerRpm = crawlerRPM > 0 ? (crawlerHSD / crawlerRPM).toFixed(2) : 0;
       const compHsdPerRpm = compressorRPM > 0 ? (compressorHSD / compressorRPM).toFixed(2) : 0;
@@ -122,6 +124,8 @@ const ProductionReport = () => {
 
       return {
         ...entry,
+        isCrawler,
+        isCamper,
         crawlerHSD,
         camperHSD,
         compressorHSD,
@@ -133,6 +137,10 @@ const ProductionReport = () => {
         crawlerHsdPerRpm,
         compHsdPerRpm,
         depthAvg,
+        // Display-only values: blank when not applicable
+        crawlerHSDDisplay: isCrawler ? (crawlerHSD || 0) : '',
+        camperHSDDisplay: isCamper ? (camperHSD || 0) : '',
+        crawlerRPMDisplay: isCrawler ? (crawlerRPM || 0) : '',
       };
     });
 
@@ -168,15 +176,15 @@ const ProductionReport = () => {
     },
     {
       title: "Crawler HSD",
-      dataIndex: "crawlerHSD",
+      dataIndex: "crawlerHSDDisplay",
       key: "crawlerHSD",
-      render: (value) => value || 0,
+      render: (value, record) => record.isCrawler ? (value || 0) : '',
     },
     {
       title: "Camper HSD",
-      dataIndex: "camperHSD",
+      dataIndex: "camperHSDDisplay",
       key: "camperHSD",
-      render: (value) => value || 0,
+      render: (value, record) => record.isCamper ? (value || 0) : '',
     },
     {
       title: "Compressor HSD",
@@ -198,9 +206,9 @@ const ProductionReport = () => {
     },
     {
       title: "Crawler RPM",
-      dataIndex: "crawlerRPM",
+      dataIndex: "crawlerRPMDisplay",
       key: "crawlerRPM",
-      render: (value) => value || 0,
+      render: (value, record) => record.isCrawler ? (value || 0) : '',
     },
     {
       title: "Comp RPM",

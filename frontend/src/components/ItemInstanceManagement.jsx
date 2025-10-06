@@ -23,7 +23,7 @@ import {
   ToolOutlined,
 } from "@ant-design/icons";
 import api from "../service/api";
-import { canEdit, canDelete, getUserRole } from "../service/auth";
+import { canEdit, canDelete, canCreate, getUserRole } from "../service/auth";
 
 const { Title } = Typography;
 
@@ -218,7 +218,7 @@ const ItemInstanceManagement = () => {
           <ToolOutlined className="mr-2" />
           Item Instance Management
         </Title>
-        {canEdit() && (
+        {canCreate() && (
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -228,7 +228,7 @@ const ItemInstanceManagement = () => {
             Add Item Instance
           </Button>
         )}
-        {!canEdit() && (
+        {!canCreate() && (
           <div style={{ color: 'red' }}>
             No edit permission (Role: {getUserRole()})
           </div>

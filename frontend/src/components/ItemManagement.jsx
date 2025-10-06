@@ -21,7 +21,7 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import api from "../service/api";
-import { canEdit, canDelete } from "../service/auth";
+import { canEdit, canDelete, canCreate } from "../service/auth";
 import { handleAutoCapitalize } from "../utils/textUtils";
 
 const { Title, Text } = Typography;
@@ -292,6 +292,7 @@ const ItemManagement = () => {
           >
             Export PDF
           </Button>
+          {canCreate() && (
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -303,6 +304,7 @@ const ItemManagement = () => {
           >
             Add Item
           </Button>
+          )}
         </Space>
       </div>
 

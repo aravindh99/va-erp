@@ -25,7 +25,7 @@ import {
   FilePdfOutlined,
 } from "@ant-design/icons";
 import api from "../service/api";
-import { canEdit, canDelete } from "../service/auth";
+import { canEdit, canDelete, canCreate } from "../service/auth";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
@@ -185,37 +185,60 @@ const PurchaseOrderComplete = () => {
   //   }, 100);
   // };
 
-  const handleEdit = (record) => {
-  setEditingId(record.id);
-  setShowCreateForm(true);
-  setGstInclude(record.gstInclude);
+  const handleEdit = async (record) => {
+  try {
+    setEditingId(record.id);
+    setShowCreateForm(true);
 
-  // Pre-fill PO Items
-  setPoItems(record.poItems?.map(pi => ({
-    id: pi.id,
-    itemId: pi.itemId,
-    quantity: pi.quantity,
-    rate: pi.rate,
-    total: pi.total,
-    item: pi.item
-  })) || []);
+    // Fetch full PO details to ensure we have shipping and billing addresses distinctly
+    const res = await api.get(`/api/pos/${record.id}`);
+    const fullPO = res?.data?.data || record;
 
-  // Pre-fill form fields
-  createForm.setFieldsValue({
-    orderNumber: record.orderNumber,
-    orderDate: record.orderDate ? dayjs(record.orderDate) : null,
-    gstInclude: record.gstInclude,
-    gstPercent: record.gstPercent,
-    supplierId: record.supplierId,
-    addressId: record.addressId,
-    shippingAddressId: record.shippingAddressId || record.addressId,
-    notes: record.notes,
-  });
+    setGstInclude(!!fullPO.gstInclude);
 
-  // Reset GST state after 100ms
-  setTimeout(() => {
+    // Pre-fill PO Items
+    setPoItems((fullPO.poItems || []).map(pi => ({
+      id: pi.id,
+      itemId: pi.itemId,
+      quantity: pi.quantity,
+      rate: pi.rate,
+      total: pi.total ?? (Number(pi.quantity) * Number(pi.rate)),
+      item: pi.item
+    })));
+
+    // Pre-fill form fields with distinct addresses
+    createForm.setFieldsValue({
+      orderNumber: fullPO.orderNumber,
+      orderDate: fullPO.orderDate ? dayjs(fullPO.orderDate) : null,
+      gstInclude: !!fullPO.gstInclude,
+      gstPercent: fullPO.gstPercent,
+      supplierId: fullPO.supplierId,
+      addressId: fullPO.addressId,
+      shippingAddressId: fullPO.shippingAddressId || undefined,
+      notes: fullPO.notes,
+    });
+  } catch (e) {
+    // Fallback to existing record if detail fetch fails
     setGstInclude(record.gstInclude);
-  }, 100);
+    setPoItems(record.poItems?.map(pi => ({
+      id: pi.id,
+      itemId: pi.itemId,
+      quantity: pi.quantity,
+      rate: pi.rate,
+      total: pi.total,
+      item: pi.item
+    })) || []);
+    createForm.setFieldsValue({
+      orderNumber: record.orderNumber,
+      orderDate: record.orderDate ? dayjs(record.orderDate) : null,
+      gstInclude: record.gstInclude,
+      gstPercent: record.gstPercent,
+      supplierId: record.supplierId,
+      addressId: record.addressId,
+      shippingAddressId: record.shippingAddressId || undefined,
+      notes: record.notes,
+    });
+  }
   };
 
 
@@ -755,7 +778,7 @@ const PurchaseOrderComplete = () => {
           <Title level={2} className="mb-2">Purchase Order Management</Title>
           <Text type="secondary">Complete PO system with PDF export and email integration</Text>
         </div>
-        {canEdit() && (
+        {canCreate() && (
           <Button
             icon={<PlusOutlined />}
             onClick={async () => {

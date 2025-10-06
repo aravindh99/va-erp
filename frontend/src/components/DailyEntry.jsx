@@ -28,7 +28,7 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import api from "../service/api";
-import { canEdit, canDelete } from "../service/auth";
+import { canEdit, canDelete, canCreate } from "../service/auth";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
@@ -516,7 +516,7 @@ const DailyEntry = () => {
           <Text type="secondary">Track daily operations, RPM, and service status</Text>
         </div>
         <Space>
-          {canEdit() && (
+          {canCreate() && (
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -1093,7 +1093,10 @@ const DailyEntry = () => {
           columns={columns}
           dataSource={entries.filter((entry) => {
             const site = sites.find(s => s.id === entry.siteId);
-            return site?.siteName?.toLowerCase().includes(searchTerm.toLowerCase());
+            const siteName = (site?.siteName || '').toLowerCase();
+            const query = (searchTerm || '').toLowerCase();
+            if (!query) return true;
+            return siteName.includes(query);
           })}
           rowKey="id"
           loading={loading}

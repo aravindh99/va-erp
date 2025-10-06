@@ -20,7 +20,7 @@ import {
   ToolOutlined,
 } from "@ant-design/icons";
 import api from "../service/api";
-import { canEdit, canDelete } from "../service/auth";
+import { canEdit, canDelete, canCreate } from "../service/auth";
 import { useNavigate } from "react-router-dom";
 
 const Vehicle = () => {
@@ -340,7 +340,7 @@ const Vehicle = () => {
           >
             Export PDF
           </Button>
-          {canEdit() && (
+          {canCreate() && (
             <Button
               icon={<PlusOutlined />}
               onClick={() => {

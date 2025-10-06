@@ -508,7 +508,7 @@ update = async (req, res, next) => {
 
   getAll = async (req, res, next) => {
     try {
-      const { page = 1, limit = 10, startDate, endDate, date, siteId } = req.query;
+      const { page = 1, limit = 10, startDate, endDate, date, siteId, vehicleId } = req.query;
       const where = {};
       if (date) {
         where.date = date;
@@ -522,12 +522,16 @@ update = async (req, res, next) => {
       if (siteId) {
         where.siteId = siteId;
       }
+      if (vehicleId) {
+        where.vehicleId = vehicleId;
+      }
 
       const items = await this.service.getAll(page, limit, {
         where,
         include: [
           { model: EmployeeList, as: "primaryEmployee", attributes: ["id", "name", "empId"] },
           { model: EmployeeList, as: "employees", attributes: ["id", "name", "empId"] },
+          { model: Vehicle, as: "vehicle", attributes: ["id", "vehicleType", "vehicleNumber"] },
         ],
       });
       return res.json({ success: true, ...items });

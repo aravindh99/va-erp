@@ -61,7 +61,7 @@ const EmployeeDetails = () => {
     setLoading(true);
     try {
       const [historyRes, sitesRes, vehiclesRes] = await Promise.all([
-        api.get(`/api/employees/${id}/history`),
+        api.get(`/api/employeeLists/${id}/history`),
         api.get("/api/sites"),
         api.get("/api/vehicles"),
       ]);
