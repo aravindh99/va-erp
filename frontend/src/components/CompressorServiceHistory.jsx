@@ -104,7 +104,7 @@ const CompressorServiceHistory = () => {
       title: "Service RPM",
       dataIndex: "serviceRPM",
       key: "serviceRPM",
-      render: (rpm) => <Text strong>{rpm?.toLocaleString()}</Text>,
+      render: (rpm) => <Text strong>{rpm ? Number(rpm).toFixed(1) : '-'}</Text>,
     },
     {
       title: "Service Date",

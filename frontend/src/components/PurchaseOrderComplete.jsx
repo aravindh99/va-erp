@@ -84,8 +84,8 @@ const PurchaseOrderComplete = () => {
         pageSize: posRes.data.limit || limit,
       }));
     } catch (err) {
-      console.error("Error fetching data", err);
       message.error("Error fetching data");
+    
     } finally {
       setLoading(false);
     }
@@ -119,7 +119,7 @@ const PurchaseOrderComplete = () => {
       const res = await api.get("/api/pos/generate-ref");
       return res.data.refNo;
     } catch (err) {
-      console.error("Error generating PO number for display", err);
+      message.error("Error generating PO number");
       return "VA/25-26/001"; // Fallback
     }
   };
@@ -164,7 +164,6 @@ const PurchaseOrderComplete = () => {
       createForm.resetFields();
       fetchData();
     } catch (err) {
-      console.error("Error saving purchase order", err);
       message.error("Error saving purchase order");
     }
   };
@@ -249,7 +248,6 @@ const PurchaseOrderComplete = () => {
       setPurchaseOrders(purchaseOrders.filter((po) => po.id !== id));
       message.success("Purchase order deleted successfully");
     } catch (err) {
-      console.error("Error deleting purchase order", err);
       message.error("Error deleting purchase order");
     }
   };
@@ -264,7 +262,6 @@ const PurchaseOrderComplete = () => {
       }
       fetchData();
     } catch (err) {
-      console.error("Error receiving PO", err);
       const msg = err?.response?.data?.message || "Error receiving PO";
       message.error(msg);
     }
@@ -323,7 +320,6 @@ const PurchaseOrderComplete = () => {
       message.success("PO item deleted successfully");
       fetchData(); // Refresh data
     } catch (err) {
-      console.error("Error deleting PO item", err);
       message.error("Error deleting PO item");
     }
   };
@@ -771,7 +767,7 @@ const PurchaseOrderComplete = () => {
   ];
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-white rounded-lg p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -1234,7 +1230,9 @@ const PurchaseOrderComplete = () => {
               >
                 <InputNumber 
                   className="w-full" 
-                  min={1} 
+                  min={0.1} 
+                  step={0.1}
+                  precision={1}
                   placeholder="Enter quantity"
                   onChange={(value) => {
                     // Auto-update total when quantity changes

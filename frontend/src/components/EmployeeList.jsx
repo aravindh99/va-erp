@@ -22,7 +22,6 @@ import {
 } from "@ant-design/icons";
 import api from "../service/api";
 import { canEdit, canDelete, canCreate } from "../service/auth";
-import { handleAutoCapitalize } from "../utils/textUtils";
 import dayjs from "dayjs";
 
 const EmployeeList = () => {
@@ -305,10 +304,10 @@ const EmployeeList = () => {
                 <Input />
               </Form.Item>
               <Form.Item name="name" label="Name" rules={[{ required: true }]}>
-                <Input onChange={(e) => handleAutoCapitalize(e, (e) => form.setFieldValue('name', e.target.value), 'words')} />
+                <Input />
               </Form.Item>
               <Form.Item name="designation" label="Designation">
-                <Input onChange={(e) => handleAutoCapitalize(e, (e) => form.setFieldValue('designation', e.target.value), 'words')} />
+                <Input />
               </Form.Item>
               <Form.Item 
                 name="phone" 
@@ -345,7 +344,8 @@ const EmployeeList = () => {
                 <InputNumber
                   className="w-full"
                   min={0}
-                  step={1000}
+                  step={0.01}
+                  precision={2}
                   formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                   parser={value => value.replace(/₹\s?|(,*)/g, '')}
                   placeholder="Enter advanced amount"

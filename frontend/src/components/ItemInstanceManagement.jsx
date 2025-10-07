@@ -43,7 +43,7 @@ const ItemInstanceManagement = () => {
     setLoading(true);
     try {
       const [instancesRes, itemsRes, vehiclesRes] = await Promise.all([
-        api.get("/api/itemInstances?include=item,vehicle"),
+        api.get("/api/itemInstances?include=item,fittedToVehicle"),
         api.get("/api/items?canBeFitted=true"),
         api.get("/api/vehicles"),
       ]);
@@ -97,8 +97,8 @@ const ItemInstanceManagement = () => {
       form.resetFields();
       fetchData();
     } catch (err) {
-      console.error("Error saving item instance", err);
-      message.error("Error saving item instance");
+      console.error("Error saving machine item", err);
+      message.error("Error saving machine item");
     }
   };
 
@@ -119,8 +119,8 @@ const ItemInstanceManagement = () => {
       message.success("Item instance deleted successfully");
       fetchData();
     } catch (err) {
-      console.error("Error deleting item instance", err);
-      message.error("Error deleting item instance");
+      console.error("Error deleting machine item", err);
+      message.error("Error deleting machine item");
     }
   };
 
@@ -154,13 +154,13 @@ const ItemInstanceManagement = () => {
       title: "Current RPM",
       dataIndex: "currentRPM",
       key: "currentRPM",
-      render: (rpm) => rpm?.toLocaleString() || "0",
+      render: (rpm) => rpm ? Number(rpm).toFixed(1) : "0",
     },
     {
       title: "Next Service RPM",
       dataIndex: "nextServiceRPM",
       key: "nextServiceRPM",
-      render: (value) => value || "-",
+      render: (value) => value ? Number(value).toFixed(1) : "-",
     },
     {
       title: "Status",
@@ -173,7 +173,7 @@ const ItemInstanceManagement = () => {
     },
     {
       title: "Fitted To",
-      dataIndex: ["vehicle", "vehicleNumber"],
+      dataIndex: ["fittedToVehicle", "vehicleNumber"],
       key: "vehicleNumber",
       render: (vehicleNumber) => vehicleNumber || "-",
     },
@@ -193,7 +193,7 @@ const ItemInstanceManagement = () => {
           )}
           {canDelete() && (
             <Popconfirm
-              title="Are you sure to delete this item instance?"
+              title="Are you sure to delete this machine item?"
               onConfirm={() => handleDelete(record.id)}
             >
               <Button
@@ -216,7 +216,7 @@ const ItemInstanceManagement = () => {
       <div className="flex justify-between items-center">
         <Title level={2}>
           <ToolOutlined className="mr-2" />
-          Item Instance Management
+          Machine Items Management
         </Title>
         {canCreate() && (
           <Button
@@ -225,7 +225,7 @@ const ItemInstanceManagement = () => {
             onClick={handleCreate}
             disabled={loading}
           >
-            Add Item Instance
+            Add Machine Item
           </Button>
         )}
         {!canCreate() && (
@@ -278,7 +278,7 @@ const ItemInstanceManagement = () => {
 
       {/* Form Modal */}
       <Modal
-        title={editingId ? "Edit Item Instance" : "Add Item Instance"}
+        title={editingId ? "Edit Machine Item" : "Add Machine Item"}
         open={showForm}
         onCancel={() => {
           setShowForm(false);
@@ -331,6 +331,8 @@ const ItemInstanceManagement = () => {
               >
                 <InputNumber
                   min={0}
+                  step={0.1}
+                  precision={1}
                   style={{ width: "100%" }}
                   placeholder="0"
                 />
@@ -342,7 +344,7 @@ const ItemInstanceManagement = () => {
                 label="Next Service RPM"
                 help="Enter the RPM at which the next service is due"
               >
-                <InputNumber className="w-full" min={0} placeholder="e.g., 1000" />
+                <InputNumber className="w-full" min={0} step={0.1} precision={1} placeholder="e.g., 1000" />
               </Form.Item>
             </Col>
           </Row>

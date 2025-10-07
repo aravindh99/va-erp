@@ -15,8 +15,7 @@ export const createEmployeeAttendanceSchema = z.object({
   workStatus: z.enum(["working", "non-working"]).optional(),
   salary: z
     .number({ invalid_type_error: "Salary must be a number" })
-    .int("Salary must be an integer")
-    .nonnegative("Salary must be non-negative"),
+    .min(0, "Salary must be non-negative"),
   date: dateYYYYMMDD,
   siteId: z.string().uuid("Invalid site ID format").nullable().optional(),
   vehicleId: z.string().uuid("Invalid vehicle ID format").nullable().optional(),

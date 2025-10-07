@@ -77,7 +77,6 @@ const ServiceManagement = () => {
       const alerts = serviceAlertsRes.data.data || [];
       setServiceAlerts(alerts);
     } catch (err) {
-      console.error("Error fetching data", err);
       message.error("Error fetching data");
     } finally {
       setLoading(false);
@@ -98,7 +97,7 @@ const ServiceManagement = () => {
         serviceDate: values.date ? values.date.format("YYYY-MM-DD") : dayjs().format("YYYY-MM-DD"),
         vehicleId: selectedItem.vehicleId,
         notes: values.notes || `Service completed for ${selectedItem.item}`,
-        createdBy: "admin" // This should come from auth context
+        createdBy: localStorage.getItem("username") || "admin"
       };
 
       // Add compressor fields if it's a compressor service
@@ -142,7 +141,6 @@ const ServiceManagement = () => {
       form.resetFields();
       fetchData(); // Refresh data
     } catch (err) {
-      console.error("Error marking service as done", err);
       message.error("Error marking service as done");
     }
   };
@@ -193,7 +191,6 @@ const ServiceManagement = () => {
       setEditingSchedule(null);
       fetchData();
     } catch (error) {
-      console.error("Error updating schedule:", error);
       message.error("Error updating schedule");
     }
   };
@@ -220,14 +217,14 @@ const ServiceManagement = () => {
       dataIndex: "currentRPM",
       key: "currentRPM",
       width: 120,
-      render: (rpm) => <Text strong>{rpm.toLocaleString()}</Text>,
+      render: (rpm) => <Text strong>{Number(rpm).toFixed(1)}</Text>,
     },
     {
       title: "Next Service",
       dataIndex: "nextServiceRPM",
       key: "nextServiceRPM",
       width: 120,
-      render: (rpm) => <Text strong>{rpm.toLocaleString()}</Text>,
+      render: (rpm) => <Text strong>{Number(rpm).toFixed(1)}</Text>,
     },
     {
       title: "Remaining",
@@ -237,7 +234,7 @@ const ServiceManagement = () => {
       render: (remaining, record) => (
         <div>
           <Text type={remaining <= 0 ? "danger" : remaining <= 50 ? "warning" : "success"}>
-            {remaining <= 0 ? "OVERDUE" : remaining > 0 ? `${remaining.toLocaleString()} RPM` : "Not Set"}
+            {remaining <= 0 ? "OVERDUE" : remaining > 0 ? `${Number(remaining).toFixed(1)} RPM` : "Not Set"}
           </Text>
           <br />
           {record.nextServiceRPM > 0 && (
@@ -324,7 +321,7 @@ const ServiceManagement = () => {
       dataIndex: "currentRPM",
       key: "currentRPM",
       width: 120,
-      render: (rpm) => <Text strong>{rpm.toLocaleString()}</Text>,
+      render: (rpm) => <Text strong>{Number(rpm).toFixed(1)}</Text>,
     },
     {
       title: "Next Service",
@@ -341,7 +338,7 @@ const ServiceManagement = () => {
       render: (remaining, record) => (
         <div>
           <Text type={remaining <= 0 ? "danger" : remaining <= 100 ? "warning" : "success"}>
-            {remaining <= 0 ? "OVERDUE" : remaining > 0 ? `${remaining.toLocaleString()} RPM` : "Not Set"}
+            {remaining <= 0 ? "OVERDUE" : remaining > 0 ? `${Number(remaining).toFixed(1)} RPM` : "Not Set"}
           </Text>
           <br />
           {record.nextServiceRPM > 0 && (
@@ -463,14 +460,14 @@ const ServiceManagement = () => {
       dataIndex: "serviceRPM",
       key: "serviceRPM",
       width: 120,
-      render: (rpm) => <Text strong>{rpm.toLocaleString()}</Text>,
+      render: (rpm) => <Text strong>{Number(rpm).toFixed(1)}</Text>,
     },
     {
       title: "Current RPM",
       dataIndex: "currentRPM",
       key: "currentRPM",
       width: 120,
-      render: (rpm) => <Text>{rpm.toLocaleString()}</Text>,
+      render: (rpm) => <Text>{Number(rpm).toFixed(1)}</Text>,
     },
     {
       title: "Performed By",
@@ -615,8 +612,8 @@ const ServiceManagement = () => {
                     <br><small>Fitted to: ${service.itemDetails.fittedToVehicle}</small>
                   ` : ''}
                 </td>
-                <td><strong>${service.serviceRPM.toLocaleString()}</strong></td>
-                <td>${service.currentRPM.toLocaleString()}</td>
+                <td><strong>${Number(service.serviceRPM).toFixed(1)}</strong></td>
+                <td>${Number(service.currentRPM).toFixed(1)}</td>
                 <td>${service.createdBy || 'System'}</td>
               </tr>
             `).join('')}
@@ -822,13 +819,13 @@ const ServiceManagement = () => {
                       title: "Current RPM",
                       dataIndex: "currentRPM",
                       key: "currentRPM",
-                      render: (rpm) => <Text strong>{rpm.toLocaleString()}</Text>,
+                      render: (rpm) => <Text strong>{Number(rpm).toFixed(1)}</Text>,
                     },
                     {
                       title: "Next Service",
                       dataIndex: "nextServiceRPM",
                       key: "nextServiceRPM",
-                      render: (rpm) => <Text strong>{rpm.toLocaleString()}</Text>,
+                      render: (rpm) => <Text strong>{Number(rpm).toFixed(1)}</Text>,
                     },
                     {
                       title: "Remaining",
@@ -960,9 +957,9 @@ const ServiceManagement = () => {
             <div className="mb-4 p-4 bg-gray-50 rounded">
               <Text strong className="block mb-2">Service Details:</Text>
               <Text className="block">Item: {selectedItem.item}</Text>
-              <Text className="block">Current RPM: {selectedItem.currentRPM.toLocaleString()}</Text>
-              <Text className="block">Service Threshold: {selectedItem.nextServiceRPM.toLocaleString()}</Text>
-              <Text className="block">Remaining: {selectedItem.remainingRPM.toLocaleString()} RPM</Text>
+              <Text className="block">Current RPM: {Number(selectedItem.currentRPM).toFixed(1)}</Text>
+              <Text className="block">Service Threshold: {Number(selectedItem.nextServiceRPM).toFixed(1)}</Text>
+              <Text className="block">Remaining: {Number(selectedItem.remainingRPM).toFixed(1)} RPM</Text>
             </div>
 
             <Form layout="vertical" form={form} onFinish={handleMarkServiceDone}>
@@ -984,7 +981,7 @@ const ServiceManagement = () => {
                     rules={[{ required: true, message: "Please enter service RPM" }]}
                     initialValue={selectedItem.currentRPM}
                   >
-                    <InputNumber className="w-full" min={0} />
+                    <InputNumber className="w-full" min={0} step={0.1} precision={1} />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
@@ -993,7 +990,7 @@ const ServiceManagement = () => {
                     label="Next Service RPM (Optional)"
                     tooltip="Leave blank to clear next service schedule"
                   >
-                    <InputNumber className="w-full" min={0} placeholder="Enter next service RPM" />
+                    <InputNumber className="w-full" min={0} step={0.1} precision={1} placeholder="Enter next service RPM" />
                   </Form.Item>
                 </Col>
                 <Col span={24}>
@@ -1007,15 +1004,18 @@ const ServiceManagement = () => {
               </Row>
 
               <div className="flex justify-end space-x-2 mt-4">
-                <Button onClick={() => {
-                  setShowServiceModal(false);
-                  setSelectedItem(null);
-                  setServiceType(null);
-                  form.resetFields();
-                }}>
+                <Button 
+                  size="large"
+                  onClick={() => {
+                    setShowServiceModal(false);
+                    setSelectedItem(null);
+                    setServiceType(null);
+                    form.resetFields();
+                  }}
+                >
                   Cancel
                 </Button>
-                <Button type="primary" htmlType="submit">
+                <Button type="primary" htmlType="submit" size="large">
                   Mark Service as Done
                 </Button>
               </div>
@@ -1047,7 +1047,7 @@ const ServiceManagement = () => {
             <div className="mb-4 p-4 bg-gray-50 rounded">
               <Text strong className="block mb-2">Current Information:</Text>
               <Text className="block">Type: {editingSchedule.type === 'vehicle' ? 'Vehicle' : 'Compressor'}</Text>
-              <Text className="block">Current RPM: {editingSchedule.currentRPM.toLocaleString()}</Text>
+              <Text className="block">Current RPM: {Number(editingSchedule.currentRPM).toFixed(1)}</Text>
               <Text className="block">Next Service RPM: {editingSchedule.nextServiceRPM || 'Not set'}</Text>
             </div>
 
@@ -1064,13 +1064,16 @@ const ServiceManagement = () => {
             </Form.Item>
 
             <div className="flex justify-end space-x-2 mt-4">
-              <Button onClick={() => {
-                setShowEditScheduleModal(false);
-                setEditingSchedule(null);
-              }}>
+              <Button 
+                size="large"
+                onClick={() => {
+                  setShowEditScheduleModal(false);
+                  setEditingSchedule(null);
+                }}
+              >
                 Cancel
               </Button>
-              <Button type="primary" htmlType="submit">
+              <Button type="primary" htmlType="submit" size="large">
                 Update Next Service RPM
               </Button>
             </div>

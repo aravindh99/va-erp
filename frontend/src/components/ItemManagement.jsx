@@ -22,7 +22,6 @@ import {
 } from "@ant-design/icons";
 import api from "../service/api";
 import { canEdit, canDelete, canCreate } from "../service/auth";
-import { handleAutoCapitalize } from "../utils/textUtils";
 
 const { Title, Text } = Typography;
 
@@ -169,7 +168,7 @@ const ItemManagement = () => {
               <p><strong>Can Be Fitted:</strong> ${item.canBeFitted ? 'Yes' : 'No'}</p>
               ${item.canBeFitted && item.instances && item.instances.length > 0 ? `
                 <div class="rpm-info">
-                  <strong>Item Instances with RPM Tracking:</strong>
+                  <strong>Machine Items with RPM Tracking:</strong>
                   <ul>
                     ${item.instances.map(instance => `
                       <li>
@@ -318,18 +317,22 @@ const ItemManagement = () => {
                 label="Item Name"
                 rules={[{ required: true }]}
               >
-                <Input onChange={(e) => handleAutoCapitalize(e, (e) => form.setFieldValue('itemName', e.target.value), 'words')} />
+                <Input />
 
               </Form.Item>
-              <Form.Item name="partNumber" label="Part Number">
-                <Input onChange={(e) => handleAutoCapitalize(e, (e) => form.setFieldValue('partNumber', e.target.value), 'upper')} />
+              <Form.Item 
+                name="partNumber" 
+                label="Part Number"
+                rules={[{ required: true, message: "Part number is required" }]}
+              >
+                <Input />
               </Form.Item>
               <Form.Item
                 name="groupName"
                 label="Group Name"
                 rules={[{ required: true, message: "Please enter group name" }]}
               >
-                <Input onChange={(e) => handleAutoCapitalize(e, (e) => form.setFieldValue('groupName', e.target.value), 'words')} />
+                <Input />
               </Form.Item>
               <Form.Item
                 name="units"
@@ -380,6 +383,8 @@ const ItemManagement = () => {
                 <InputNumber
                   className="w-full"
                   min={0}
+                  step={0.1}
+                  precision={1}
                   placeholder="0"
                 />
               </Form.Item>

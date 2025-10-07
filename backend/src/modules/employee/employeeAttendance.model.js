@@ -28,7 +28,7 @@ const EmployeeAttendance = sequelize.define(
       allowNull: true,
     },
     salary: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: false,
     },
     date: {

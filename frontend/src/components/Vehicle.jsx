@@ -100,7 +100,7 @@ const Vehicle = () => {
       // Build payload with only defined values
       const payload = {
         vehicleType: values.vehicleType,
-        vehicleNumber: values.vehicleNumber?.toUpperCase(),
+        vehicleNumber: values.vehicleNumber,
         brandId: values.brandId,
       };
 
@@ -379,10 +379,6 @@ const Vehicle = () => {
               >
                 <Input 
                   placeholder="e.g., TN01AB1234" 
-                  onChange={(e) => {
-                    const upperValue = e.target.value.toUpperCase();
-                    form.setFieldValue('vehicleNumber', upperValue);
-                  }}
                 />
               </Form.Item>
               <Form.Item
@@ -402,14 +398,14 @@ const Vehicle = () => {
                 name="vehicleRPM"
                 label="Machine RPM"
               >
-                <InputNumber className="w-full" min={0} />
+                <InputNumber className="w-full" min={0} step={0.1} precision={1} />
               </Form.Item>
               <Form.Item
                 name="nextServiceRPM"
                 label="Next Service RPM"
                 tooltip="Enter the RPM at which the next service is due"
               >
-                <InputNumber className="w-full" min={0} placeholder="e.g., 1000" />
+                <InputNumber className="w-full" min={0} step={0.1} precision={1} placeholder="e.g., 1000" />
               </Form.Item>
               <Form.Item
                 name="compressorId"

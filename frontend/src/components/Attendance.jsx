@@ -77,7 +77,7 @@ const Attendance = () => {
       });
       setAttendanceData(initialData);
     } catch (err) {
-      console.error("Error fetching attendance", err);
+      message.error("Error fetching attendance");
       setRecords([]);
     } finally {
       setLoading(false);
@@ -100,7 +100,6 @@ const Attendance = () => {
       
       setViewRecords(records);
     } catch (err) {
-      console.error("Error fetching view records", err);
       message.error("Error fetching attendance records");
       setViewRecords([]);
     } finally {
@@ -113,7 +112,7 @@ const Attendance = () => {
       const res = await api.get("/api/employeeLists");
       setEmployees(res.data.data || []);
     } catch (err) {
-      console.error("Error fetching employees", err);
+      message.error("Error fetching employees");
     }
   };
 
@@ -122,7 +121,7 @@ const Attendance = () => {
       const res = await api.get("/api/sites");
       setSites(res.data.data || []);
     } catch (err) {
-      console.error("Error fetching sites", err);
+      message.error("Error fetching sites");
     }
   };
 
@@ -131,23 +130,28 @@ const Attendance = () => {
       const res = await api.get("/api/vehicles");
       setVehicles(res.data.data || []);
     } catch (err) {
-      console.error("Error fetching vehicles", err);
+      message.error("Error fetching vehicles");
     }
   };
 
   useEffect(() => {
-    fetchEmployees();
-    fetchSites();
-    fetchVehicles();
-    fetchRecords();
-    fetchViewRecords();
+    const initializeData = async () => {
+      await Promise.all([
+        fetchEmployees(),
+        fetchSites(),
+        fetchVehicles()
+      ]);
+      fetchRecords();
+      fetchViewRecords();
+    };
+    initializeData();
   }, []);
 
   useEffect(() => {
-    if (employees.length > 0) {
+    if (employees.length > 0 && selectedDate) {
       fetchRecords();
     }
-  }, [employees, selectedDate]);
+  }, [employees.length, selectedDate]);
 
   // Update attendance data for an employee
   const updateAttendanceData = (employeeId, field, value) => {
@@ -203,7 +207,6 @@ const Attendance = () => {
       fetchEmployees();
       fetchViewRecords();
     } catch (err) {
-      console.error("Error saving attendance", err);
       message.error("Error saving attendance");
     } finally {
       setSaving(false);
@@ -266,7 +269,6 @@ const Attendance = () => {
       await fetchViewRecords(viewDate, viewSite);
       await fetchEmployees();
     } catch (e) {
-      console.error('Inline save error', e);
       message.error('Failed to update attendance');
     } finally {
       setInlineSaving(false);
@@ -285,7 +287,6 @@ const Attendance = () => {
       fetchRecords();
       fetchViewRecords();
     } catch (err) {
-      console.error("Error deleting record", err);
       message.error("Error deleting record");
     }
   };
@@ -537,6 +538,8 @@ const Attendance = () => {
               value={inlineEdit.salary}
               onChange={(v) => handleInlineField('salary', v)}
               min={0}
+              step={0.01}
+              precision={2}
               formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               parser={value => value.replace(/₹\s?|(,*)/g, '')}
             />
@@ -645,6 +648,8 @@ const Attendance = () => {
             style={{ width: 100 }}
             size="small"
             min={0}
+            step={0.01}
+            precision={2}
             formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
             parser={value => value.replace(/₹\s?|(,*)/g, '')}
           />
@@ -723,7 +728,7 @@ const Attendance = () => {
   return (
     <div className="space-y-8">
       {/* SECTION 1: ADD ATTENDANCE */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg p-6">
         <div className="mb-6">
           <Title level={2} className="mb-2">Mark Daily Attendance</Title>
           <Text type="secondary">Mark attendance for all employees for the selected date</Text>
@@ -815,7 +820,7 @@ const Attendance = () => {
       </div>
 
       {/* SECTION 2: VIEW ATTENDANCE RECORDS */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg p-6">
         <div className="flex justify-between items-center mb-6">
           <div>
             <Title level={2} className="mb-2">View Attendance Records</Title>

@@ -44,7 +44,7 @@ const Item = sequelize.define(
     },
     // Simple stock quantity tracking
     stock: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: false,
       defaultValue: 0,
     },

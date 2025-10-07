@@ -24,6 +24,7 @@ export default function Login() {
       const res = await api.post("/api/auth/login", { username, password });
       const token = res.data.token;
       localStorage.setItem("token", token);
+      localStorage.setItem("username", res.data.username || username);
       navigate("/");
     } catch (err) {
       const apiMsg = err?.response?.data?.message || "Invalid credentials";
@@ -104,7 +105,7 @@ export default function Login() {
         {/* Right: Card aligned to right */}
         <div className="flex lg:justify-end justify-center items-center mt-36">
           <div
-            className="w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl p-6 sm:p-8 text-gray-900"
+            className="w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-lg p-6 sm:p-8 text-gray-900"
             role="dialog"
             aria-label="Login"
           >
@@ -184,7 +185,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-purple-600 to-purple-500 px-4 py-2.5 font-medium text-white shadow-lg hover:from-purple-500 hover:to-purple-400 focus:ring-2 focus:ring-offset-2 focus:ring-purple-400 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-purple-600 to-purple-500 px-4 py-2.5 font-medium text-white shadow-md hover:from-purple-500 hover:to-purple-400 focus:ring-2 focus:ring-offset-2 focus:ring-purple-400 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-busy={isSubmitting}
           >
             {isSubmitting ? (

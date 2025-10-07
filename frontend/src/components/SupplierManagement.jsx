@@ -18,7 +18,6 @@ import {
 } from "@ant-design/icons";
 import api from "../service/api";
 import { canEdit, canDelete, canCreate } from "../service/auth";
-import { handleAutoCapitalize } from "../utils/textUtils";
 
 const SupplierManagement = () => {
   const [form] = Form.useForm();
@@ -280,7 +279,7 @@ const SupplierManagement = () => {
                   { max: 255, message: "Supplier name must be no more than 255 characters" }
                 ]}
               >
-                <Input onChange={(e) => handleAutoCapitalize(e, (e) => form.setFieldValue('supplierName', e.target.value), 'words')} />
+                <Input />
               </Form.Item>
               <Form.Item
                 name="gstNumber"

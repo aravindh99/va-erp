@@ -5,8 +5,8 @@ export const createVehicleSchema = z.object({
   vehicleNumber: z.string().min(1).max(255).transform(val => val.toUpperCase()),
   status: z.enum(["active", "inactive"]).optional(),
   brandId: z.string().uuid("Invalid brand ID format"),
-  vehicleRPM: z.number().int().min(0, "Starting RPM must be non-negative").optional(),
-  nextServiceRPM: z.number().int().min(0, "Next service RPM must be non-negative").optional(),
+  vehicleRPM: z.number().min(0, "Starting RPM must be non-negative").optional(),
+  nextServiceRPM: z.number().min(0, "Next service RPM must be non-negative").optional(),
   compressorId: z.string().uuid("Invalid compressor ID format").optional(),
 });
 

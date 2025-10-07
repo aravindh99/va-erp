@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const createServiceSchema = z.object({
-  serviceRPM: z.number().int().positive("Service RPM must be positive"),
-  nextServiceRPM: z.number().int().min(0, "Next service RPM must be non-negative").optional(),
+  serviceRPM: z.number().positive("Service RPM must be positive"),
+  nextServiceRPM: z.number().min(0, "Next service RPM must be non-negative").optional(),
   serviceDate: z.string().date("Invalid date format").optional(),
   serviceType: z.enum(["vehicle", "compressor", "item"]),
   vehicleId: z.string().uuid("Invalid vehicle ID format").optional(),

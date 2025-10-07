@@ -20,43 +20,43 @@ const DailyEntry = sequelize.define(
     },
     // Vehicle RPM - opening and closing
     vehicleOpeningRPM: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
     },
     vehicleClosingRPM: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
     },
     // Compressor RPM - opening and closing
     compressorOpeningRPM: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
     },
     compressorClosingRPM: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
     },
     // Diesel and meter readings
     dieselUsed: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
     },
     // HSD usage
     vehicleHSD: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
     },
     compressorHSD: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
     },
     meter: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
     },
     // Number of holes drilled
     noOfHoles: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
       defaultValue: 0,
     },

@@ -18,7 +18,6 @@ import {
 } from "@ant-design/icons";
 import api from "../service/api";
 import { canEdit, canDelete, canCreate } from "../service/auth";
-import { handleAutoCapitalize } from "../utils/textUtils";
 
 const SiteManagement = () => {
   const [form] = Form.useForm();
@@ -224,7 +223,7 @@ const SiteManagement = () => {
                 label="Site Name"
                 rules={[{ required: true }]}
               >
-                <Input onChange={(e) => handleAutoCapitalize(e, (e) => form.setFieldValue('siteName', e.target.value), 'words')} />
+                <Input />
               </Form.Item>
               <Form.Item
                 name="siteStatus"

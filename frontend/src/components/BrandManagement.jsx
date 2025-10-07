@@ -18,7 +18,6 @@ import {
 } from "@ant-design/icons";
 import api from "../service/api";
 import { canEdit, canDelete, canCreate } from "../service/auth";
-import { handleAutoCapitalize } from "../utils/textUtils";
 
 const BrandManagement = () => {
   const [form] = Form.useForm();
@@ -223,7 +222,7 @@ const BrandManagement = () => {
                 label="Brand Name"
                 rules={[{ required: true }]}
               >
-                <Input onChange={(e) => handleAutoCapitalize(e, (e) => form.setFieldValue('brandName', e.target.value), 'words')} />
+                <Input />
               </Form.Item>
               <Form.Item
                 name="brandStatus"

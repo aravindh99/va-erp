@@ -10,7 +10,7 @@ export default function NotFound() {
 
       <div className="relative z-10 flex items-center justify-center min-h-screen px-6">
         <div className="max-w-xl w-full">
-          <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-2xl p-8 text-center overflow-hidden">
+          <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-lg p-8 text-center overflow-hidden">
             <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
             <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
 

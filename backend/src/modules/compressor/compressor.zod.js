@@ -6,8 +6,8 @@ export const createCompressorSchema = z.object({
   status: z.enum(["active", "inactive"]).optional(),
   serialNumber: z.string().optional(),
   purchaseDate: z.string().date("Invalid date format").optional(),
-  compressorRPM: z.number().int().nonnegative("Compressor RPM must be non-negative").optional(),
-  nextServiceRPM: z.number().int().min(0, "Next service RPM must be non-negative").optional(),
+  compressorRPM: z.number().min(0, "Compressor RPM must be non-negative").optional(),
+  nextServiceRPM: z.number().min(0, "Next service RPM must be non-negative").optional(),
 });
 
 export const updateCompressorSchema = createCompressorSchema.partial();

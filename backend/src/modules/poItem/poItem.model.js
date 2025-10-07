@@ -27,7 +27,7 @@ const POItem = sequelize.define(
       },
     },
     quantity: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: false,
     },
     rate: {

@@ -60,24 +60,47 @@ const EmployeeDetails = () => {
   const fetchEmployeeDetails = async () => {
     setLoading(true);
     try {
-      const [historyRes, sitesRes, vehiclesRes] = await Promise.all([
-        api.get(`/api/employeeLists/${id}/history`),
+      const [sitesRes, vehiclesRes] = await Promise.all([
         api.get("/api/sites"),
         api.get("/api/vehicles"),
       ]);
-
-      const historyData = historyRes.data.data;
       const sitesData = sitesRes.data.data || [];
       const vehiclesData = vehiclesRes.data.data || [];
-
-      setEmployee(historyData.employee);
-      setAttendanceRecords(historyData.employee.attendances || []);
-      setDailyEntries(historyData.dailyEntries || []);
       setSites(sitesData);
       setVehicles(vehiclesData);
 
-      // Use statistics from API
-      setStatistics(historyData.statistics);
+      // Try history endpoint first
+      try {
+        const historyRes = await api.get(`/api/employeeLists/${id}/history`);
+        const historyData = historyRes.data.data;
+        setEmployee(historyData.employee);
+        setAttendanceRecords(historyData.employee.attendances || []);
+        setDailyEntries(historyData.dailyEntries || []);
+        setStatistics(historyData.statistics);
+        return;
+      } catch (historyErr) {
+        // Fallback to basic employee data if history not available
+        if (historyErr?.response?.status === 404) {
+          const empRes = await api.get(`/api/employeeLists/${id}`);
+          const emp = empRes.data.data;
+          if (!emp) throw historyErr;
+          setEmployee(emp);
+          setAttendanceRecords([]);
+          setDailyEntries([]);
+          setStatistics({
+            totalDaysWorked: 0,
+            totalPresent: 0,
+            totalAbsent: 0,
+            totalSalaryPaid: 0,
+            totalAdvanceTaken: emp.advancedAmount || 0,
+            currentBalance: emp.remainingAmount || 0,
+            uniqueSites: 0,
+            uniqueVehicles: 0,
+          });
+        } else {
+          throw historyErr;
+        }
+      }
     } catch (err) {
       console.error("Error fetching employee details:", err);
       message.error("Failed to fetch employee details");

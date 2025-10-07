@@ -22,7 +22,6 @@ import {
 import api from "../service/api";
 import { canEdit, canDelete } from "../service/auth";
 import { useNavigate } from "react-router-dom";
-import { handleAutoCapitalize } from "../utils/textUtils";
 import dayjs from "dayjs";
 
 const CompressorManagement = () => {
@@ -268,14 +267,14 @@ const CompressorManagement = () => {
                 label="Compressor Name"
                 rules={[{ required: true }]}
               >
-                <Input onChange={(e) => handleAutoCapitalize(e, (e) => form.setFieldValue('compressorName', e.target.value), 'words')} />
+                <Input />
               </Form.Item>
               <Form.Item
                 name="compressorType"
                 label="Type"
                 rules={[{ required: true }]}
               >
-                <Input onChange={(e) => handleAutoCapitalize(e, (e) => form.setFieldValue('compressorType', e.target.value), 'words')} />
+                <Input />
               </Form.Item>
 
               <Form.Item
@@ -317,7 +316,7 @@ const CompressorManagement = () => {
                 label="Next Service RPM"
                 tooltip="Enter the RPM at which the next service is due"
               >
-                <InputNumber className="w-full" min={0} placeholder="e.g., 1000" />
+                <InputNumber className="w-full" min={0} step={0.1} precision={1} placeholder="e.g., 1000" />
               </Form.Item>
             </div>
             <Form.Item>

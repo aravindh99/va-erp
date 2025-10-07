@@ -175,16 +175,16 @@ const ProductionReport = () => {
       render: (date) => dayjs(date).format("DD/MM/YYYY"),
     },
     {
+      title: "Meter",
+      dataIndex: "meter",
+      key: "meter",
+      render: (value) => value || 0,
+    },
+    {
       title: "Crawler HSD",
       dataIndex: "crawlerHSDDisplay",
       key: "crawlerHSD",
       render: (value, record) => record.isCrawler ? (value || 0) : '',
-    },
-    {
-      title: "Camper HSD",
-      dataIndex: "camperHSDDisplay",
-      key: "camperHSD",
-      render: (value, record) => record.isCamper ? (value || 0) : '',
     },
     {
       title: "Compressor HSD",
@@ -193,15 +193,15 @@ const ProductionReport = () => {
       render: (value) => value || 0,
     },
     {
+      title: "Camper HSD",
+      dataIndex: "camperHSDDisplay",
+      key: "camperHSD",
+      render: (value, record) => record.isCamper ? (value || 0) : '',
+    },
+    {
       title: "Total HSD",
       dataIndex: "totalHSD",
       key: "totalHSD",
-      render: (value) => value || 0,
-    },
-    {
-      title: "Meter",
-      dataIndex: "meter",
-      key: "meter",
       render: (value) => value || 0,
     },
     {
@@ -211,15 +211,9 @@ const ProductionReport = () => {
       render: (value, record) => record.isCrawler ? (value || 0) : '',
     },
     {
-      title: "Comp RPM",
+      title: "Compressor RPM",
       dataIndex: "compressorRPM",
       key: "compressorRPM",
-      render: (value) => value || 0,
-    },
-    {
-      title: "Holes",
-      dataIndex: "noOfHoles",
-      key: "noOfHoles",
       render: (value) => value || 0,
     },
     {
@@ -247,7 +241,13 @@ const ProductionReport = () => {
       render: (value) => value > 0 ? value : '-',
     },
     {
-      title: "Depth/Avg",
+      title: "Number of Holes",
+      dataIndex: "noOfHoles",
+      key: "noOfHoles",
+      render: (value) => value || 0,
+    },
+    {
+      title: "Depth Avg",
       dataIndex: "depthAvg",
       key: "depthAvg",
       render: (value) => value,
@@ -284,37 +284,37 @@ const ProductionReport = () => {
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Crawler HSD</th>
-                <th>Camper HSD</th>
-                <th>Compressor HSD</th>
-                <th>Total HSD</th>
                 <th>Meter</th>
+                <th>Crawler HSD</th>
+                <th>Compressor HSD</th>
+                <th>Camper HSD</th>
+                <th>Total HSD</th>
                 <th>Crawler RPM</th>
-                <th>Comp RPM</th>
-                <th>Holes</th>
+                <th>Compressor RPM</th>
                 <th>HSD/MTR</th>
                 <th>MTR/RPM</th>
                 <th>Crawler HSD/Crawler RPM</th>
                 <th>Comp HSD/Comp RPM</th>
-                <th>Depth/Avg</th>
+                <th>Number of Holes</th>
+                <th>Depth Avg</th>
               </tr>
             </thead>
             <tbody>
               ${productionData.map(entry => `
                 <tr>
                   <td>${dayjs(entry.date).format("DD/MM/YYYY")}</td>
-                  <td>${entry.crawlerHSD || 0}</td>
-                  <td>${entry.camperHSD || 0}</td>
-                  <td>${entry.compressorHSD || 0}</td>
-                  <td>${entry.totalHSD || 0}</td>
                   <td>${entry.meter || 0}</td>
+                  <td>${entry.crawlerHSD || 0}</td>
+                  <td>${entry.compressorHSD || 0}</td>
+                  <td>${entry.camperHSD || 0}</td>
+                  <td>${entry.totalHSD || 0}</td>
                   <td>${entry.crawlerRPM || 0}</td>
                   <td>${entry.compressorRPM || 0}</td>
-                  <td>${entry.noOfHoles || 0}</td>
                   <td>${entry.hsdMtr}</td>
                   <td>${entry.mtrRPM}</td>
                   <td>${entry.crawlerHsdPerRpm > 0 ? entry.crawlerHsdPerRpm : '-'}</td>
                   <td>${entry.compHsdPerRpm > 0 ? entry.compHsdPerRpm : '-'}</td>
+                  <td>${entry.noOfHoles || 0}</td>
                   <td>${entry.depthAvg}</td>
                 </tr>
               `).join('')}
@@ -322,18 +322,18 @@ const ProductionReport = () => {
             <tfoot>
               <tr class="total-row">
                 <td>Total</td>
-                <td>${totals.totalCrawlerHSD || 0}</td>
-                <td>${totals.totalCamperHSD || 0}</td>
-                <td>${totals.totalCompressorHSD || 0}</td>
-                <td>${totals.totalTotalHSD || 0}</td>
                 <td>${totals.totalMeter || 0}</td>
+                <td>${totals.totalCrawlerHSD || 0}</td>
+                <td>${totals.totalCompressorHSD || 0}</td>
+                <td>${totals.totalCamperHSD || 0}</td>
+                <td>${totals.totalTotalHSD || 0}</td>
                 <td>${totals.totalCrawlerRPM || 0}</td>
                 <td>${totals.totalCompressorRPM || 0}</td>
-                <td>${totals.totalHoles || 0}</td>
                 <td>${totals.totalHsdMtr}</td>
                 <td>${totals.totalMtrRPM}</td>
                 <td>${totals.totalCrawlerHsdPerRpm > 0 ? totals.totalCrawlerHsdPerRpm : '-'}</td>
                 <td>${totals.totalCompHsdPerRpm > 0 ? totals.totalCompHsdPerRpm : '-'}</td>
+                <td>${totals.totalHoles || 0}</td>
                 <td>${totals.totalDepthAvg}</td>
               </tr>
             </tfoot>

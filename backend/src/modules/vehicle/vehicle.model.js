@@ -33,11 +33,11 @@ const Vehicle = sequelize.define(
       },
     },
     vehicleRPM: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
     },
     nextServiceRPM: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
     },
     compressorId: {

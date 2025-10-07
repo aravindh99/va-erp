@@ -11,11 +11,11 @@ const Service = sequelize.define(
       primaryKey: true,
     },
     serviceRPM: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: false, // at what RPM the service was done
     },
     nextServiceRPM: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true, // what the next service RPM was set to after this service
     },
     serviceType: {

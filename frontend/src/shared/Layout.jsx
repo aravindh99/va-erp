@@ -24,7 +24,7 @@ const navArray = [
   { label: "Item Management", path: "/item-management" },
   { label: "Service Management", path: "/service-management" },
   { label: "Inventory Management", path: "/inventory-management" },
-  { label: "Item Instances", path: "/item-instances", icon: <ToolOutlined /> },
+  { label: "Machine Items", path: "/item-instances", icon: <ToolOutlined /> },
   { label: "Machine", path: "/vehicle" },
   { label: "Compressor", path: "/compressor" },
   {

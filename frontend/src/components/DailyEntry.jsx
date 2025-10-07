@@ -64,6 +64,11 @@ const DailyEntry = () => {
     compressorOpening: 0,
     compressorClosing: 0,
   });
+  
+  // Service done modal state
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [serviceType, setServiceType] = useState(null); // 'vehicle' or 'compressor'
+  const [serviceForm] = Form.useForm();
   const [availableItems, setAvailableItems] = useState([]);
   const [showFitItemModal, setShowFitItemModal] = useState(false);
   const [selectedItemInstances, setSelectedItemInstances] = useState([]);
@@ -88,7 +93,6 @@ const DailyEntry = () => {
         pageSize: res.data.limit || limit,
       }));
     } catch (err) {
-      console.error("Error fetching daily entries", err);
       setEntries([]);
       message.error(`Failed to fetch daily entries: ${err.response?.data?.message || err.message}`);
     } finally {
@@ -101,7 +105,7 @@ const DailyEntry = () => {
       const res = await api.get("/api/sites");
       setSites(res.data.data || []);
     } catch (err) {
-      console.error("Error fetching sites", err);
+      message.error("Error fetching sites");
     }
   };
 
@@ -110,7 +114,7 @@ const DailyEntry = () => {
       const res = await api.get("/api/vehicles");
       setMachines(res.data.data || []);
     } catch (err) {
-      console.error("Error fetching machines", err);
+      message.error("Error fetching machines");
     }
   };
 
@@ -119,7 +123,7 @@ const DailyEntry = () => {
       const res = await api.get("/api/compressors");
       setCompressors(res.data.data || []);
     } catch (err) {
-      console.error("Error fetching compressors", err);
+      message.error("Error fetching compressors");
     }
   };
 
@@ -128,7 +132,7 @@ const DailyEntry = () => {
       const res = await api.get("/api/employeeLists");
       setEmployees(res.data.data || []);
     } catch (err) {
-      console.error("Error fetching employees", err);
+      message.error("Error fetching employees");
     }
   };
 
@@ -137,7 +141,7 @@ const DailyEntry = () => {
       const res = await api.get("/api/items");
       setItems(res.data.data || []);
     } catch (err) {
-      console.error("Error fetching items", err);
+      message.error("Error fetching items");
     }
   };
 
@@ -157,7 +161,7 @@ const DailyEntry = () => {
       const res = await api.get("/api/dailyEntries/generate-ref");
       return res.data.refNo;
     } catch (err) {
-      console.error("Error generating ref number", err);
+      message.error("Error generating ref number");
       return `VA-${Date.now()}`;
     }
   };
@@ -204,7 +208,7 @@ const DailyEntry = () => {
     // Check for service alerts
     checkServiceAlerts(machine);
     
-    // Fetch fitted items for this machine
+    // Fetch fitted machine items for this machine
     fetchFittedItems(machineId);
   };
 
@@ -225,6 +229,82 @@ const DailyEntry = () => {
     setTimeout(() => {
       form.validateFields([field]);
     }, 0);
+  };
+
+  // Handle service done toggle
+  const handleServiceDoneToggle = (serviceType, checked) => {
+    if (checked) {
+      setServiceType(serviceType);
+      setShowServiceModal(true);
+      // Pre-fill the form with current RPM
+      const currentRPM = serviceType === 'vehicle' 
+        ? (selectedMachine?.vehicleRPM || 0)
+        : (selectedCompressor?.compressorRPM || 0);
+      serviceForm.setFieldsValue({
+        serviceRPM: currentRPM,
+        nextServiceRPM: null
+      });
+    } else {
+      // If unchecked, just update the form field
+      form.setFieldValue(`${serviceType}ServiceDone`, false);
+    }
+  };
+
+  // Handle service completion
+  const handleServiceCompletion = async (values) => {
+    try {
+      // Add null checks before accessing IDs
+      if (serviceType === 'vehicle' && !selectedMachine) {
+        message.error('Please select a machine first');
+        return;
+      }
+      if (serviceType === 'compressor' && !selectedCompressor) {
+        message.error('Please select a compressor first');
+        return;
+      }
+
+      const payload = {
+        serviceRPM: values.serviceRPM,
+        nextServiceRPM: values.nextServiceRPM || null,
+        serviceType: serviceType,
+        serviceDate: values.date ? values.date.format("YYYY-MM-DD") : dayjs().format("YYYY-MM-DD"),
+        notes: values.notes || `Service completed for ${serviceType === 'vehicle' ? 'Machine' : 'Compressor'}`,
+        createdBy: localStorage.getItem("username") || "admin"
+      };
+
+      if (serviceType === 'vehicle') {
+        payload.vehicleId = selectedMachine.id;
+        payload.compressorId = selectedMachine.compressorId;
+      } else if (serviceType === 'compressor') {
+        payload.compressorId = selectedCompressor.id;
+      }
+
+      // Create service record
+      await api.post("/api/services", payload);
+      
+      // Update the entity's current RPM and next service RPM
+      const updateData = {
+        [serviceType === 'vehicle' ? 'vehicleRPM' : 'compressorRPM']: values.serviceRPM,
+        nextServiceRPM: values.nextServiceRPM || null
+      };
+
+      if (serviceType === 'vehicle') {
+        await api.put(`/api/vehicles/${selectedMachine.id}`, updateData);
+      } else if (serviceType === 'compressor') {
+        await api.put(`/api/compressors/${selectedCompressor.id}`, updateData);
+      }
+
+      message.success(`${serviceType === 'vehicle' ? 'Machine' : 'Compressor'} service completed successfully`);
+      
+      setShowServiceModal(false);
+      setServiceType(null);
+      serviceForm.resetFields();
+      
+      // Refresh data
+      fetchData();
+    } catch (err) {
+      message.error("Error completing service");
+    }
   };
 
   // Check service alerts for selected vehicle
@@ -295,7 +375,7 @@ const DailyEntry = () => {
     setServiceAlerts(alerts);
   };
 
-  // Fetch fitted items for selected machine
+  // Fetch fitted machine items for selected machine
   const fetchFittedItems = async (vehicleId) => {
     if (!vehicleId) {
       setFittedItems([]);
@@ -305,7 +385,7 @@ const DailyEntry = () => {
       const response = await api.get(`/api/itemInstances/fitted/${vehicleId}`);
       setFittedItems(response.data.data || []);
     } catch (err) {
-      console.error("Error fetching fitted items", err);
+      message.error("Error fetching fitted machine items");
     }
   };
 
@@ -315,7 +395,7 @@ const DailyEntry = () => {
       const response = await api.get("/api/itemInstances/available");
       setAvailableItems(response.data.data || []);
     } catch (err) {
-      console.error("Error fetching available items", err);
+      message.error("Error fetching available items");
     }
   };
 
@@ -404,7 +484,6 @@ const DailyEntry = () => {
       setServiceAlerts([]);
       fetchEntries();
     } catch (err) {
-      console.error("Error saving daily entry", err);
       message.error(`Failed to save daily entry: ${err.response?.data?.message || err.message}`);
     }
   };
@@ -419,7 +498,10 @@ const DailyEntry = () => {
       ...record,
       date: record.date ? dayjs(record.date) : null,
       notes: record.notes || "",
-      additionalEmployeeIds: record.additionalEmployeeIds || [],
+      // Derive additionalEmployeeIds from association, excluding primary employee
+      additionalEmployeeIds: (Array.isArray(record.employees)
+        ? record.employees.map(e => e.id).filter(id => id && id !== record.employeeId)
+        : []),
     });
 
     if (record.vehicleId) {
@@ -433,7 +515,7 @@ const DailyEntry = () => {
       await api.delete(`/api/dailyEntries/${id}`, { data: {} });
       setEntries(entries.filter((entry) => entry.id !== id));
     } catch (err) {
-      console.error("Error deleting daily entry", err);
+      message.error("Error deleting daily entry");
     }
   };
 
@@ -675,10 +757,11 @@ const DailyEntry = () => {
                 </Row>
               </Panel>
 
-              {/* RPM Tracking - Only for Crawler type machines */}
-              {selectedMachine && selectedMachine.vehicleType.toLowerCase().includes('crawler') && (
-                <Panel header="RPM Tracking" key="rpm">
-                  <Row gutter={16}>
+              {/* RPM Tracking */}
+              <Panel header="RPM Tracking" key="rpm">
+                <Row gutter={16}>
+                  {/* Machine RPM only for crawler */}
+                  {selectedMachine && selectedMachine.vehicleType.toLowerCase().includes('crawler') && (
                     <Col xs={24} sm={12}>
                       <Card title={`${selectedMachine?.vehicleType || 'Machine'} RPM`} size="small">
                       <Row gutter={8}>
@@ -702,6 +785,8 @@ const DailyEntry = () => {
                             <InputNumber
                               className="w-full"
                               min={0}
+                              step={0.1}
+                              precision={1}
                               placeholder="0"
                               onChange={(value) => handleRPMChange('vehicleOpeningRPM', value)}
                             />
@@ -727,6 +812,8 @@ const DailyEntry = () => {
                             <InputNumber
                               className="w-full"
                               min={0}
+                              step={0.1}
+                              precision={1}
                               placeholder="0"
                               onChange={(value) => handleRPMChange('vehicleClosingRPM', value)}
                             />
@@ -739,8 +826,10 @@ const DailyEntry = () => {
                         </Text>
                       </div>
                     </Card>
-                  </Col>
-                  <Col xs={24} sm={12}>
+                    </Col>
+                  )}
+                  {/* Compressor RPM always visible (when compressor selected) */}
+                  <Col xs={24} sm={selectedMachine && selectedMachine.vehicleType.toLowerCase().includes('crawler') ? 12 : 24}>
                     <Card title="Compressor RPM" size="small">
                       <Row gutter={8}>
                         <Col span={12}>
@@ -763,8 +852,11 @@ const DailyEntry = () => {
                             <InputNumber
                               className="w-full"
                               min={0}
+                              step={0.1}
+                              precision={1}
                               placeholder="0"
                               onChange={(value) => handleRPMChange('compressorOpeningRPM', value)}
+                              disabled={!selectedCompressor}
                             />
                           </Form.Item>
                         </Col>
@@ -788,8 +880,11 @@ const DailyEntry = () => {
                             <InputNumber
                               className="w-full"
                               min={0}
+                              step={0.1}
+                              precision={1}
                               placeholder="0"
                               onChange={(value) => handleRPMChange('compressorClosingRPM', value)}
+                              disabled={!selectedCompressor}
                             />
                           </Form.Item>
                         </Col>
@@ -803,26 +898,30 @@ const DailyEntry = () => {
                   </Col>
                 </Row>
               </Panel>
-              )}
 
-              {/* Fitted Items */}
-              <Panel header="Fitted Items" key="fittedItems">
+              {/* Fitted Machine Items */}
+              <Panel header="Fitted Machine Items" key="fittedItems">
                 <Row gutter={16}>
                   <Col span={24}>
-                    <Card title="Currently Fitted Items" size="small">
+                    <Card title="Currently Fitted Machine Items" size="small">
                       <Table
                         dataSource={fittedItems}
                         columns={[
                           { title: "Instance Number", dataIndex: "instanceNumber", key: "instanceNumber" },
                           { title: "Item Name", dataIndex: ["item", "itemName"], key: "itemName" },
                           { title: "Part Number", dataIndex: ["item", "partNumber"], key: "partNumber" },
-                          { title: "Current RPM", dataIndex: "currentRPM", key: "currentRPM" },
+                          { 
+                            title: "Current RPM (Compressor)", 
+                            key: "currentRPM", 
+                            render: () => (rpmValues.compressorClosing - rpmValues.compressorOpening) || 0
+                          },
                           { 
                             title: "Service Due", 
                             key: "serviceDue",
                             render: (_, record) => {
                               if (!record.nextServiceRPM) return "-";
-                              const remaining = record.nextServiceRPM - record.currentRPM;
+                              const currentRpm = (rpmValues.compressorClosing - rpmValues.compressorOpening) || 0;
+                              const remaining = record.nextServiceRPM - currentRpm;
                               if (remaining <= 0) return "Overdue";
                               return remaining <= 100 ? `Due soon (${remaining} RPM)` : `${remaining} RPM`;
                             }
@@ -871,7 +970,7 @@ const DailyEntry = () => {
                       label="Diesel Used (L)"
                       rules={[{ type: 'number', min: 0 }]}
                     >
-                      <InputNumber className="w-full" min={0} placeholder="0" />
+                      <InputNumber className="w-full" min={0} step={0.1} precision={1} placeholder="0" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} sm={8}>
@@ -880,7 +979,7 @@ const DailyEntry = () => {
                       label="Machine HSD"
                       rules={[{ type: 'number', min: 0 }]}
                     >
-                      <InputNumber className="w-full" min={0} placeholder="0" />
+                      <InputNumber className="w-full" min={0} step={0.1} precision={1} placeholder="0" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} sm={8}>
@@ -889,7 +988,7 @@ const DailyEntry = () => {
                       label="Compressor HSD"
                       rules={[{ type: 'number', min: 0 }]}
                     >
-                      <InputNumber className="w-full" min={0} placeholder="0" />
+                      <InputNumber className="w-full" min={0} step={0.1} precision={1} placeholder="0" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} sm={8}>
@@ -898,7 +997,7 @@ const DailyEntry = () => {
                       label="Number of Holes"
                       rules={[{ type: 'number', min: 0 }]}
                     >
-                      <InputNumber className="w-full" min={0} placeholder="0" />
+                      <InputNumber className="w-full" min={0} step={0.1} precision={1} placeholder="0" />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -909,7 +1008,7 @@ const DailyEntry = () => {
                       label="Total Production Meter"
                       rules={[{ type: 'number', min: 0 }]}
                     >
-                      <InputNumber className="w-full" min={0} placeholder="0" />
+                      <InputNumber className="w-full" min={0} step={0.1} precision={1} placeholder="0" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} sm={12}>
@@ -1020,6 +1119,8 @@ const DailyEntry = () => {
                         <Switch
                           checkedChildren="Done"
                           unCheckedChildren="Pending"
+                          onChange={(checked) => handleServiceDoneToggle('vehicle', checked)}
+                          disabled={!selectedMachine}
                         />
                       </Form.Item>
                       {selectedMachine && (
@@ -1044,6 +1145,8 @@ const DailyEntry = () => {
                         <Switch
                           checkedChildren="Done"
                           unCheckedChildren="Pending"
+                          onChange={(checked) => handleServiceDoneToggle('compressor', checked)}
+                          disabled={!selectedCompressor}
                         />
                       </Form.Item>
                       {selectedCompressor && (
@@ -1171,6 +1274,103 @@ const DailyEntry = () => {
             </Text>
           </div>
         </div>
+      </Modal>
+
+      {/* Service Completion Modal */}
+      <Modal
+        title={`Complete ${serviceType === 'vehicle' ? 'Machine' : 'Compressor'} Service`}
+        open={showServiceModal}
+        onCancel={() => {
+          setShowServiceModal(false);
+          setServiceType(null);
+          serviceForm.resetFields();
+          // Reset the service done toggle
+          if (serviceType) {
+            form.setFieldValue(`${serviceType}ServiceDone`, false);
+          }
+        }}
+        footer={null}
+        width={600}
+      >
+        <Form
+          layout="vertical"
+          form={serviceForm}
+          onFinish={handleServiceCompletion}
+        >
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="date"
+                label="Service Date"
+                rules={[{ required: true, message: "Please select service date" }]}
+                initialValue={dayjs()}
+              >
+                <DatePicker className="w-full" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="serviceRPM"
+                label="Service RPM (Current RPM when service is done)"
+                rules={[{ required: true, message: "Please enter service RPM" }]}
+              >
+                <InputNumber 
+                  className="w-full" 
+                  min={0} 
+                  step={0.1} 
+                  precision={1}
+                  placeholder="Enter service RPM"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="nextServiceRPM"
+                label="Next Service RPM (Optional)"
+                tooltip="Leave blank to clear next service schedule"
+              >
+                <InputNumber 
+                  className="w-full" 
+                  min={0} 
+                  step={0.1} 
+                  precision={1}
+                  placeholder="Enter next service RPM"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item
+                name="notes"
+                label="Service Notes"
+              >
+                <Input.TextArea 
+                  rows={3} 
+                  placeholder="Enter service notes (optional)" 
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button 
+              size="large"
+              onClick={() => {
+                setShowServiceModal(false);
+                setServiceType(null);
+                serviceForm.resetFields();
+                // Reset the service done toggle
+                if (serviceType) {
+                  form.setFieldValue(`${serviceType}ServiceDone`, false);
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="primary" htmlType="submit" size="large">
+              Complete Service
+            </Button>
+          </div>
+        </Form>
       </Modal>
     </div>
   );

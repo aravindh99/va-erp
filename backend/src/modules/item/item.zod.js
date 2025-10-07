@@ -8,7 +8,7 @@ export const createItemSchema = z.object({
   purchaseRate: z.number().min(0).optional(),
   gst: z.number().min(0).optional(),
   canBeFitted: z.boolean().optional(),
-  stock: z.number().int().min(0).optional(),
+  stock: z.number().min(0).optional(),
 });
 
 export const updateItemSchema = createItemSchema.partial();

@@ -32,19 +32,19 @@ const ItemInstance = sequelize.define(
     },
     // Current meter reading (cumulative)
     currentMeter: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
       defaultValue: 0,
     },
     // Current RPM reading (cumulative)
     currentRPM: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
       defaultValue: 0,
     },
     // Next service RPM for this instance
     nextServiceRPM: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
     },
     // Last service date
@@ -54,7 +54,7 @@ const ItemInstance = sequelize.define(
     },
     // Next service due (calculated)
     nextServiceDue: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: true,
     },
     // Currently fitted to which machine/vehicle
