@@ -59,6 +59,7 @@ class PoCustomController extends BaseController {
         include: [
           { model: Supplier, as: "supplier" },
           { model: Address, as: "address" },
+          { model: Address, as: "shippingAddress" },
           { model: POItem, as: "poItems", include: [{ model: Item, as: "item" }] },
         ],
       });
@@ -74,6 +75,7 @@ class PoCustomController extends BaseController {
         include: [
           { model: Supplier, as: "supplier" },
           { model: Address, as: "address" },
+          { model: Address, as: "shippingAddress" },
           { model: POItem, as: "poItems", include: [{ model: Item, as: "item" }] },
         ],
       });

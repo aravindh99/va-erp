@@ -82,6 +82,10 @@ export const defineAssociations = () => {
   Address.hasMany(Po, { foreignKey: "addressId", as: "pos" });
   Po.belongsTo(Address, { foreignKey: "addressId", as: "address" });
 
+  // Shipping address relationship
+  Address.hasMany(Po, { foreignKey: "shippingAddressId", as: "shippingPos" });
+  Po.belongsTo(Address, { foreignKey: "shippingAddressId", as: "shippingAddress" });
+
   Po.belongsToMany(Item, {
     through: PoItem,
     foreignKey: "poId",
