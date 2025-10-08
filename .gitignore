@@ -1,0 +1,9 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# IDEs and editors
+.vscode/
+.cursor/

@@ -1,0 +1,186 @@
+@import "tailwindcss";
+
+#root,
+body,
+html {
+  padding: 0px;
+  margin: 0px;
+}
+
+/* Hide scrollbars but keep scroll functionality */
+.hide-scrollbar {
+  /* For Webkit browsers (Chrome, Safari, Edge) */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Webkit browsers */
+}
+
+/* Specific classes for different scroll areas */
+.sidebar-scroll {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.main-content-scroll {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.main-content-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* =====================
+   Global UI Enhancements
+   - Violet gradient primary buttons
+   - Consistent button sizing and shadows
+   - Card shadows for better depth
+   ===================== */
+
+/* Primary buttons: violet gradient and white text */
+.ant-btn-primary {
+  background-image: linear-gradient(90deg, #6d28d9 0%, #8b5cf6 100%);
+  background-color: #6d28d9; /* fallback */
+  border: none;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(109, 40, 217, 0.2);
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  background-image: linear-gradient(90deg, #5b21b6 0%, #7c3aed 100%);
+  background-color: #5b21b6;
+  color: #ffffff;
+  box-shadow: 0 3px 6px rgba(109, 40, 217, 0.3);
+}
+
+.ant-btn-primary:active {
+  background-image: linear-gradient(90deg, #4c1d95 0%, #6d28d9 100%);
+  background-color: #4c1d95;
+  box-shadow: 0 1px 3px rgba(109, 40, 217, 0.25);
+}
+
+.ant-btn-primary[disabled],
+.ant-btn-primary[disabled]:hover,
+.ant-btn-primary[disabled]:focus,
+.ant-btn-primary[disabled]:active {
+  background-image: none;
+  background-color: #a78bfa; /* purple-300 */
+  color: #ffffff;
+  opacity: 0.8;
+  box-shadow: none;
+}
+
+/* Default buttons: subtle violet accents */
+.ant-btn:not(.ant-btn-primary):not(.ant-btn-link) {
+  border-color: #8b5cf6;
+  color: #6d28d9;
+  box-shadow: 0 1px 2px rgba(139, 92, 246, 0.1);
+}
+
+.ant-btn:not(.ant-btn-primary):not(.ant-btn-link):hover {
+  border-color: #7c3aed;
+  color: #5b21b6;
+  box-shadow: 0 2px 4px rgba(124, 58, 237, 0.15);
+}
+
+/* Button sizing tweaks so small buttons are still comfortably clickable */
+.ant-btn {
+  border-radius: 10px;
+}
+
+.ant-btn-sm {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  line-height: 32px;
+}
+
+.ant-btn-lg {
+  height: 44px;
+  padding: 0 18px;
+  font-size: 15px;
+  line-height: 44px;
+}
+
+/* Card shadows - minimal and subtle */
+.ant-card {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.ant-card:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.ant-card-head {
+  border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+/* Inputs focus ring to match violet palette */
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper-focused,
+.ant-select-focused .ant-select-selector,
+.ant-picker-focused,
+.ant-input-number-focused {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25) !important;
+}
+
+/* Remove excessive shadows from tables and other elements */
+.ant-table {
+  box-shadow: none !important;
+}
+
+.ant-table-thead > tr > th {
+  box-shadow: none !important;
+}
+
+.ant-table-tbody > tr > td {
+  box-shadow: none !important;
+}
+
+.ant-table-container {
+  box-shadow: none !important;
+}
+
+/* Remove shadows from modals and other overlays */
+.ant-modal-content {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.ant-drawer-content {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Remove shadows from dropdowns and popovers */
+.ant-dropdown {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.ant-popover-inner {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Remove shadows from specific page containers */
+.bg-white.rounded-lg {
+  box-shadow: none !important;
+}
+
+/* Remove shadows from main content areas */
+.space-y-8 > div {
+  box-shadow: none !important;
+}
